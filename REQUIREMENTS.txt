@@ -1,0 +1,12 @@
+langchain
+langgraph
+langchain-community
+langchain-classic
+langchain-google-genai
+langchain-groq
+groq
+google-genai
+ddgs
+wikipedia
+python-dotenv
+pydantic
