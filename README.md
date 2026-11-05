@@ -61,3 +61,9 @@ An AI-powered research and health assistant designed to provide evidence-based i
 ## Disclaimer
 
 This agent is intended for informational and research purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider for any health-related concerns.
+
+## Implementation plan and team diagrams
+
+See the [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the proposed architecture, clinical safety workflow, evidence lifecycle, validation gates, roadmap, and first-sprint backlog. For an offline shareable version with eight rendered diagrams, open [the HTML handoff](docs/IMPLEMENTATION_PLAN.html) in a browser.
+
+The plan describes proposed work; the current prototype does not yet implement these controls.
