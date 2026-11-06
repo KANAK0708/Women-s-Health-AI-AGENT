@@ -109,7 +109,12 @@ Adapters never persist, call models/APIs, or log health data.
 python3 -m unittest discover -s tests -v
 ```
 
-Tests currently use structural fixtures mirroring the upstream schemas. Tests
-against the actual upstream classes and the combined workflow are pending merge.
+Unit tests use structural fixtures mirroring the upstream schemas. The optional
+`test_upstream_integration.py` suite was also run successfully against the actual
+session model, retrieval engine/bundle, and response schema in an isolated snapshot
+of `origin/main` at `bbe4ed3`. Application wiring and a branch merge remain pending.
 The separate guideline prototype is deferred; use the teammate's retrieval engine
 as the integration target rather than expanding a second clinical registry.
+
+The tools-side orchestration and its integration factory are now available; see
+[ORCHESTRATION.md](ORCHESTRATION.md) for wiring, failure handling, and demonstrations.

@@ -1,5 +1,23 @@
 # Women's Health AI Agent
 
+## Tools branch: orchestration and standalone tools
+
+The `tools` branch adds tested cycle calculations, PubMed research retrieval,
+memory/retrieval adapters, bounded tool routing, and citation-based plain-text
+formatting. These are not yet wired into the legacy `main.py` on this branch.
+
+```bash
+python3 -m health_tools.workflow_demo cycle
+python3 -m health_tools.workflow_demo education
+python3 -m unittest discover -s tests -v
+```
+
+Demonstrations use synthetic evidence and no clinical safety assessment.
+See [the orchestration guide](docs/ORCHESTRATION.md) and
+[the shared team contract](docs/TEAM_CONTRACT.md) for integration with the
+memory/retrieval work on `main`. The integration factory requires an application
+safety policy; it does not silently bypass safety checks.
+
 An AI-powered research and health assistant designed to provide evidence-based information on women's health topics (such as PCOS/PCOD, wellness habits, and general health awareness). Powered by LangChain, LangGraph, Groq, DuckDuckGo Search, and Wikipedia.
 
 ## Features
