@@ -194,3 +194,4 @@ for p in new_passages:
 
 MANIFEST_PATH.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 print(f"Manifest updated: {len(manifest['sources'])} sources, {len(manifest['passages'])} passages.")
+
