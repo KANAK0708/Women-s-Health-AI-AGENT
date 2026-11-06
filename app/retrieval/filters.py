@@ -18,9 +18,10 @@ from app.schemas.evidence import EducationalCategory, EvidencePassage, SourceMet
 URGENT_HAZARD_PATTERNS: list[tuple[re.Pattern[str], str, str]] = [
     (
         re.compile(
-            r"\b(faint(?:ed|ing)?|pass(?:ed)?\s+out|syncope|unconscious|dizz(?:y|iness)\s+and\s+bleeding|"
-            r"soak(?:ing)?\s+through.*pad|heavy\s+bleeding.*hour|severe\s+(?:pelvic|abdominal)\s+pain|"
-            r"pregnant.*(?:bleeding|pain|faint)|ectopic|chest\s+pain|shortness\s+of\s+breath)\b",
+            r"\b(faint(?:ed|ing)?|pass(?:ed)?\s+out|syncope|unconscious|dizz(?:y|iness|y)\s+and\s+bleeding|"
+            r"soak(?:ing)?\s+through.*?(?:pad|tampon)s?|heavy\s+bleeding.*?(?:hour|clot)|"
+            r"severe\s+(?:pelvic|abdominal)\s+pain|pregnan(?:t|cy).*?(?:bleeding|pain|cramp|faint)|"
+            r"(?:bleeding|pain|cramp).*?pregnan(?:t|cy)|ectopic|chest\s+pain|shortness\s+of\s+breath)\b",
             re.IGNORECASE,
         ),
         "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
@@ -41,8 +42,9 @@ URGENT_HAZARD_PATTERNS: list[tuple[re.Pattern[str], str, str]] = [
 DISALLOWED_CLINICAL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (
         re.compile(
-            r"\b(should\s+i\s+stop\s+(?:taking|my)|stop\s+my\s+prescribed|change\s+my\s+dose|"
-            r"what\s+dosage\s+of|prescribe\s+me|how\s+many\s+mg\s+should\s+i\s+take)\b",
+            r"\b(should\s+i\s+stop\s+(?:taking|my)|stop\s+my\s+prescribed|"
+            r"(?:change|double|increase|decrease|halve|adjust)\s+(?:the|my)?\s*(?:dose|dosage)|"
+            r"what\s+dosage\s+of|prescribe\s+me|how\s+many\s+mg.*?(?:take|need|prescribe))\b",
             re.IGNORECASE,
         ),
         "Medication initiation, stopping, or dosage adjustments require a prescribing clinician or pharmacist.",
