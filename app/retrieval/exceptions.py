@@ -19,3 +19,4 @@ class UrgentEscalationRequired(RetrievalError):
 
 class InsufficientEvidenceError(RetrievalError):
     """Raised when no approved, current, in-scope passages meet coverage thresholds."""
+

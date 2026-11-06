@@ -107,3 +107,4 @@ class EphemeralSessionStore:
     def active_session_count(self) -> int:
         self.purge_expired()
         return len(self._sessions)
+

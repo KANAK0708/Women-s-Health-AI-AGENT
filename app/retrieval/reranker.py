@@ -201,3 +201,4 @@ def rerank_passages(
     scored_pool.sort(key=lambda item: item.final_score, reverse=True)
     shortlist = scored_pool[:max_candidates]
     return shortlist[:max_excerpts]
+

@@ -199,3 +199,4 @@ class GuardrailedEducationalSearch:
             f"Note: Use only for general definition, symptoms, and lifestyle prevention.\n"
             f"{result}"
         )
+

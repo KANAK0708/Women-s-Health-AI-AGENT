@@ -89,3 +89,4 @@ def discover_topic_for_staging(
 if __name__ == "__main__":
     items = discover_topic_for_staging("Polycystic ovary syndrome")
     print(f"Staged {len(items)} educational items to {STAGING_QUEUE_PATH}")
+

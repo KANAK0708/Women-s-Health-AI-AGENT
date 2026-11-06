@@ -28,3 +28,4 @@ class ConsentPolicy:
             raise PermissionError(
                 "Durable conversation history is disabled in Phase 1 pilot policy."
             )
+

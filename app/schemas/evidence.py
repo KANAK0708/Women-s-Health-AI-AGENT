@@ -132,3 +132,4 @@ class EducationalResponse(BaseModel):
     evidence: list[EvidenceCitation] = Field(default_factory=list)
     protocol_id: Optional[str] = None
     system_version: str = "v1.0.0-pilot"
+

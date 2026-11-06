@@ -36,3 +36,4 @@ __all__ = [
     "rerank_passages",
     "validate_educational_query_scope",
 ]
+

@@ -58,3 +58,4 @@ class SessionMemory(BaseModel):
         """Check whether the session TTL has elapsed."""
         reference = now or datetime.now(timezone.utc)
         return reference >= self.expires_at
+
