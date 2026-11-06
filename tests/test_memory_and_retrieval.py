@@ -73,6 +73,22 @@ class TestRetrievalAndGovernance(unittest.TestCase):
             self.assertTrue(cit.url.startswith("https://"))
             self.assertNotEqual(cit.passage_id, "psg-legacy-superseded-01")
 
+    def test_retrieval_dysmenorrhea_and_endometriosis(self) -> None:
+        # Dysmenorrhea retrieval
+        dys_bundle = self.engine.retrieve("What is dysmenorrhea, what are symptoms, and how to relieve cramps with heat?")
+        dys_ids = {sp.passage.passage_id for sp in dys_bundle.scored_passages}
+        self.assertTrue(any(pid.startswith("psg-dys-") for pid in dys_ids))
+
+        # Endometriosis retrieval
+        endo_bundle = self.engine.retrieve("What is endometriosis, chronic pelvic pain symptoms, and supportive lifestyle?")
+        endo_ids = {sp.passage.passage_id for sp in endo_bundle.scored_passages}
+        self.assertTrue(any(pid.startswith("psg-endo-") for pid in endo_ids))
+
+        # Heavy bleeding and iron support retrieval
+        hmb_bundle = self.engine.retrieve("What defines heavy menstrual bleeding menorrhagia and what iron-rich foods help?")
+        hmb_ids = {sp.passage.passage_id for sp in hmb_bundle.scored_passages}
+        self.assertTrue(any(pid.startswith("psg-hmb-") for pid in hmb_ids))
+
     def test_out_of_domain_query_raises_insufficient_evidence(self) -> None:
         with self.assertRaises(InsufficientEvidenceError):
             self.engine.retrieve("How do I rebuild a diesel tractor transmission gearbox?")

@@ -283,3 +283,4 @@ class ClaimVerifier:
             matched_passage_ids=matched_passage_ids,
             rationale=rationale,
         )
+

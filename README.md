@@ -6,6 +6,16 @@ An evidence-grounded women's health education and care-navigation assistant focu
 
 See the [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the architecture, clinical safety workflow, evidence lifecycle, validation gates, roadmap, and first-sprint backlog. For an offline shareable version with eight rendered diagrams, open [the HTML handoff](docs/IMPLEMENTATION_PLAN.html) in a browser.
 
+## Clinical Evidence Base (`clinical/evidence_manifest/`)
+
+The manifest contains versioned, clinician-approved passages across adult menstrual and reproductive health:
+- **Monash University Guidelines (2023)**: Rotterdam criteria, adult PCOS diagnostic evaluation, metabolic lifestyle interventions.
+- **World Health Organization (WHO, 2025)**: Global PCOS prevalence (8–13%), hyperandrogenism, clinical symptoms.
+- **WHO Fact Sheet on Endometriosis (2023)**: Pathophysiology, dyspareunia, chronic pelvic pain, and supportive non-pharmacological care.
+- **NIH NICHD Menstrual Guidelines (2024)**: Normal menstrual cycle range (21–35 days), bleeding duration (2–7 days), self-care, and emergency warning signs.
+- **ACOG Clinical Consensus (2024)**: Primary vs. secondary dysmenorrhea, prostaglandin mechanisms, topical thermal therapy, and exercise evidence.
+- **CDC Public Health Guide (2024)**: Heavy menstrual bleeding (>80 mL or >7 days), blood clot evaluation, iron-rich nutrition, and vitamin C pairing.
+
 ---
 
 ## Core Architecture: Memory & Retrieval
