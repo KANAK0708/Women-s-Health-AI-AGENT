@@ -1,73 +1,89 @@
-import sys
+"""Integrated development CLI for PCOS and menstrual-health education.
 
-from dotenv import load_dotenv
-from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
-from langchain_groq import ChatGroq
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import PydanticOutputParser
-from pydantic import BaseModel
-from tools import search_tool, wiki_tool, save_tool
+Uses the existing memory/retrieval subsystem and the tools-side orchestrator.
+No LLM generation or automatic external-search fallback is enabled.
+"""
 
-load_dotenv()
-sys.stdout.reconfigure(encoding="utf-8")
-sys.stderr.reconfigure(encoding="utf-8")
+import argparse
+import json
 
+from app.schemas.evidence import EducationalResponse
+from app.workflow.service import HealthApplication
+from health_tools.workflow import render_response
 
-class HealthResponse(BaseModel):
-    topic: str
-    summary: str
-    Disease: str
-    HealthStatus: str
-    Habits: list[str]   
+application = HealthApplication()
+# Preserve these names for existing callers using the teammate's session store.
+session_store = application.store
 
 
+def process_health_query(
+    query: str, *, session_id=None, use_external_search_on_gap=False,
+    enable_llm_generation=False, allow_session_context=None, **tool_inputs,
+):
+    """Compatibility API returning (EducationalResponse, SessionMemory).
 
-llm = ChatGroq(model="openai/gpt-oss-20b", max_tokens=2500, reasoning_effort="low", max_retries=1, timeout=20)
-parser = PydanticOutputParser(pydantic_object=HealthResponse)
+    Legacy LLM/search flags are retained for call compatibility only: this path
+    always uses exact excerpts and explicit research authorization. Programmatic
+    callers should supply allow_session_context explicitly; None preserves the
+    existing store policy. The CLI always supplies an explicit choice.
+    """
+    result, session = application.process(
+        query, session_id=session_id, allow_session_context=allow_session_context,
+        **tool_inputs,
+    )
+    return EducationalResponse.model_validate(result.response), session
 
-prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            """
-            You are a health assistant that provides clear, practical, and
-            evidence-based health information. Answer the user's health query
-            directly, avoid diagnosing or prescribing treatment, and recommend
-            consulting a qualified healthcare professional for serious or
-            persistent symptoms. Use the available tools when useful. Return a
-            clear plain-text answer after using the tools.
-            """,
-        ),
-        ("placeholder", "{chat_history}"),
-        ("human", "{query}"),
-        ("placeholder", "{agent_scratchpad}"),
-    ]
-)
-tools = [search_tool, wiki_tool, save_tool]
 
-agent = create_tool_calling_agent(
-    llm=llm,
-    prompt=prompt,
-    tools=tools
-)
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--query", "-q", help="One question; omit for interactive mode")
+    parser.add_argument("--period-starts", nargs="+", help="Confirmed starts, oldest first, YYYY-MM-DD")
+    parser.add_argument("--as-of", help="Local reference date for cycle arithmetic, YYYY-MM-DD")
+    parser.add_argument("--remember", action="store_true", help="Retain minimal context in this process until expiry/deletion")
+    parser.add_argument("--allow-external-research", action="store_true", help="Authorize sending separately supplied research terms to NCBI")
+    parser.add_argument("--research-query", help="Research terms without personal identifiers")
+    parser.add_argument("--jurisdiction", default="Global")
+    parser.add_argument("--json", action="store_true", help="Print the structured EducationalResponse")
+    args = parser.parse_args()
+    options = dict(
+        allow_session_context=args.remember,
+        period_start_dates=args.period_starts, as_of=args.as_of,
+        jurisdiction=args.jurisdiction, allow_external_research=args.allow_external_research,
+        research_query=args.research_query,
+    )
+    if not args.json:
+        print("Development build: evidence-review metadata and safety rules need clinical verification.")
+    session_id = None
+    interactive = args.query is None
+    if interactive:
+        print("PCOS and period-health assistant. /quit to exit; /forget to delete session context.")
+        print("Session context retention: " + ("on" if args.remember else "off"))
+    try:
+        while True:
+            try:
+                query = input("You: ").strip() if interactive else args.query
+            except (EOFError, KeyboardInterrupt):
+                break
+            if interactive and query == "/quit":
+                break
+            if interactive and query == "/forget":
+                if session_id:
+                    application.forget(session_id)
+                session_id = None
+                print("Session context deleted.")
+                continue
+            result, session = application.process(query, session_id=session_id, **options)
+            session_id = session.session_id
+            if args.json:
+                print(json.dumps(result.response, indent=2))
+            else:
+                print(render_response(result))
+            if not interactive:
+                break
+    finally:
+        if session_id:
+            application.forget(session_id)
 
-agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
-query = input("What can i help you research? ")
-raw_response = agent_executor.invoke({"query": query})
-print(raw_response)
 
-formatter_prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "Convert the answer into the requested HealthResponse format. "
-            "Return only valid structured output.\n{format_instructions}",
-        ),
-        ("human", "Question: {query}\nAnswer: {answer}"),
-    ]
-).partial(format_instructions=parser.get_format_instructions())
-
-structured_response = (formatter_prompt | llm | parser).invoke(
-    {"query": query, "answer": raw_response["output"]}
-)
-print(structured_response)
+if __name__ == "__main__":
+    main()

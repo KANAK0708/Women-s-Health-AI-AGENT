@@ -44,3 +44,9 @@ venv.bak/
 *~
 .DS_Store
 Thumbs.db
+
+# Ungoverned plaintext outputs & staging queues
+research_output.txt
+clinical/evidence_manifest/staging_queue.json
+
+

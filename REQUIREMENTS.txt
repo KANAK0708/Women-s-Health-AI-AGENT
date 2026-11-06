@@ -10,3 +10,4 @@ ddgs
 wikipedia
 python-dotenv
 pydantic
+numpy

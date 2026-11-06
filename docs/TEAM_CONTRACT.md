@@ -11,12 +11,15 @@ The `health_tools.handoff` adapter targets the interfaces inspected in
 `origin/main` at commit `bbe4ed3`: `SessionMemory`, `RetrievalBundle`, and
 `EducationalResponse`. These upstream classes remain canonical. The adapter's
 snapshots are internal read-only inputs, not replacement storage/response schemas.
-No merge or live application wiring has been performed.
+`origin/main` at that commit has now been merged into `tools`, and the CLI is wired
+through `app/workflow/service.py`. The canonical memory/retrieval files remain
+owned by the teammate; the tools side owns the service and output formatting.
 
 ## Handoff checklist for the memory/retrieval agent
 
 1. Fetch `origin/tools` and read this document plus `health_tools/contracts.py`
-   and `health_tools/handoff.py`. The contract publication does not merge `main`.
+   and `health_tools/handoff.py`. Integration is on `tools`; publishing it does
+   not update the remote `main` branch.
 2. Keep owning `app/storage`, `app/retrieval`, evidence ingestion/registry, and
    their canonical schemas. Tools, orchestration, generation, and formatting are
    owned by the tools agent; coordinate changes at the shared boundary.
@@ -112,7 +115,8 @@ python3 -m unittest discover -s tests -v
 Unit tests use structural fixtures mirroring the upstream schemas. The optional
 `test_upstream_integration.py` suite was also run successfully against the actual
 session model, retrieval engine/bundle, and response schema in an isolated snapshot
-of `origin/main` at `bbe4ed3`. Application wiring and a branch merge remain pending.
+of `origin/main` at `bbe4ed3`. They also run in the merged application, alongside
+service/CLI tests in `test_application_integration.py`.
 The separate guideline prototype is deferred; use the teammate's retrieval engine
 as the integration target rather than expanding a second clinical registry.
 
