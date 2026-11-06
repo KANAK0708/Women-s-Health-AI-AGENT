@@ -23,6 +23,10 @@ The system enforces two strictly isolated trust domains:
    - **Clarification Turn Cap**: Enforces a maximum of **2 focused clarification turns**.
    - **Ephemeral TTL & Deletion Cascades (`app/storage/session_store.py`)**: Short-lived in-memory sessions with enforced TTL expiry, explicit user deletion cascades, and redacted operational audit codes (no autonomous plaintext file writes or raw health logs).
 
+3. **Claim-to-Passage Entailment Verification (`app/verification/`)**
+   - **Citation Integrity & Factual Grounding (`app/verification/verifier.py`)**: Evaluates every generated clinical claim against cited passage tokens before displaying it to the user.
+   - **Safety Extrapolation Filter**: Detects high-risk assertions (e.g., "cure", "guaranteed", unverified dosing) and polarity/negation contradictions, automatically triggering safe fallback or filtering unsupported claims.
+
 ---
 
 ## Repository Structure
@@ -37,20 +41,29 @@ The system enforces two strictly isolated trust domains:
 │   ├── schemas/
 │   │   ├── evidence.py        # SourceMetadata, EvidencePassage, EducationalResponse
 │   │   └── memory.py          # TriState, MinimalPatientContext, SessionMemory
-│   └── storage/
-│       ├── consent.py         # ConsentPolicy & TTL rules
-│       ├── context_tracker.py # Safe TriState context extraction & 2-turn clarification cap
-│       └── session_store.py   # EphemeralSessionStore with TTL & deletion cascades
+│   ├── storage/
+│   │   ├── consent.py         # ConsentPolicy & TTL rules
+│   │   ├── context_tracker.py # Safe TriState context extraction & 2-turn clarification cap
+│   │   └── session_store.py   # EphemeralSessionStore with TTL & deletion cascades
+│   └── verification/
+│       └── verifier.py        # ClaimVerifier, entailment checks & high-risk extrapolation filters
 ├── clinical/
 │   └── evidence_manifest/
 │       └── manifest.json      # Versioned, clinician-approved PCOS & menstrual health passages
 ├── docs/
 │   ├── IMPLEMENTATION_PLAN.md # Engineering and clinical implementation plan
 │   └── IMPLEMENTATION_PLAN.html # Offline shareable handoff with 8 SVG diagrams
+├── evals/
+│   ├── development/
+│   │   └── seed_cases.json    # 50 clinician-labeled development benchmark cases
+│   ├── rubric/
+│   │   └── scoring.py         # Section 10 release gates scoring rubric
+│   └── run_evals.py           # Automated evaluation runner
 ├── pipelines/
 │   └── seed_evidence.py       # Offline Wikipedia/DuckDuckGo staging pipeline
 ├── tests/
-│   └── test_memory_and_retrieval.py # Unit & integration test suite
+│   ├── test_memory_and_retrieval.py # Retrieval & memory unit/integration test suite
+│   └── test_claim_verifier.py # Claim entailment & citation resolution test suite
 ├── main.py                    # Controlled workflow entrypoint
 ├── tools.py                   # Guardrailed LangChain retrieval & educational search tools
 └── REQUIREMENTS.txt           # Python dependencies

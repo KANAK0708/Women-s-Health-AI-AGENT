@@ -208,3 +208,4 @@ def compute_suite_report(results: list[CaseEvaluationResult]) -> SuiteSummaryRep
     )
 
     return rep
+

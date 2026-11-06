@@ -37,6 +37,7 @@ from app.schemas.evidence import (
 from app.schemas.memory import SessionMemory, TriState
 from app.storage.context_tracker import ContextTracker
 from app.storage.session_store import EphemeralSessionStore
+from app.verification.verifier import ClaimVerifier, VerificationDecision
 from tools import EDUCATIONAL_TOOLS, search_tool, wiki_tool
 
 load_dotenv()
@@ -46,6 +47,7 @@ sys.stderr.reconfigure(encoding="utf-8")
 # Initialize isolated trust domains
 session_store = EphemeralSessionStore()
 retrieval_engine = HybridRetrievalEngine()
+claim_verifier = ClaimVerifier()
 parser = PydanticOutputParser(pydantic_object=EducationalResponse)
 
 
@@ -280,14 +282,25 @@ def process_health_query(
             # Enforce registry-derived citations and request_id (never trust LLM-invented URLs)
             candidate.request_id = request_id
             candidate.evidence = bundle.citations
-            session.audit_codes.append("GROUNDED_LLM_RESPONSE_VALIDATED")
-            session_store.save_session(session)
-            return candidate, session
+
+            # Section 6 & 10: Claim-to-Passage Entailment Verification
+            ver_report = claim_verifier.verify(candidate, bundle.scored_passages)
+            session.audit_codes.append(ver_report.audit_code)
+
+            if ver_report.decision in (VerificationDecision.ACCEPT, VerificationDecision.REPAIRED):
+                candidate.claims = ver_report.repaired_claims
+                session.audit_codes.append("GROUNDED_LLM_RESPONSE_VALIDATED")
+                session_store.save_session(session)
+                return candidate, session
+            else:
+                session.audit_codes.append("LLM_FAILED_VERIFICATION_FALLBACK")
         except Exception:
             session.audit_codes.append("LLM_FALLBACK_TO_DETERMINISTIC_EVIDENCE")
 
     # Deterministic citation-backed response
     response = _build_deterministic_educational_response(request_id, query, bundle)
+    ver_report = claim_verifier.verify(response, bundle.scored_passages)
+    session.audit_codes.append(ver_report.audit_code)
     session_store.save_session(session)
     return response, session
 
