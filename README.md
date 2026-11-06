@@ -1,69 +1,85 @@
 # Women's Health AI Agent
 
-An AI-powered research and health assistant designed to provide evidence-based information on women's health topics (such as PCOS/PCOD, wellness habits, and general health awareness). Powered by LangChain, LangGraph, Groq, DuckDuckGo Search, and Wikipedia.
+An evidence-grounded women's health education and care-navigation assistant focused on adult menstrual health and PCOS education (**what a condition is**, **recognized symptoms**, and **evidence-based lifestyle & prevention habits**).
 
-## Features
+## Implementation Plan and Team Diagrams
 
-- **Tool-Calling Agent**: Uses DuckDuckGo Search and Wikipedia to research medical topics and health queries in real time.
-- **Structured Health Insights**: Uses Pydantic to format outputs into structured responses (`topic`, `summary`, `Disease`, `HealthStatus`, `Habits`).
-- **Research Logging**: Automatically logs research findings with timestamps to `research_output.txt`.
+See the [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the architecture, clinical safety workflow, evidence lifecycle, validation gates, roadmap, and first-sprint backlog. For an offline shareable version with eight rendered diagrams, open [the HTML handoff](docs/IMPLEMENTATION_PLAN.html) in a browser.
 
-## Project Structure
+---
 
+## Core Architecture: Memory & Retrieval
+
+The system enforces two strictly isolated trust domains:
+
+1. **Clinical Evidence & Hybrid Retrieval Engine (`app/retrieval/`, `clinical/evidence_manifest/`)**
+   - **Pre-Filtering (`app/retrieval/filters.py`)**: Deterministically filters sources by approval status, non-supersession (`is_superseded == False`), expiry date, adult population (`adults_18+`), and jurisdiction before running similarity search.
+   - **Hybrid Lexical + Vector Reranker (`app/retrieval/reranker.py`)**: Combines IDF-weighted lexical matching with vector cosine similarity and educational intent boosting (`what_it_is`, `symptoms`, `prevention_and_lifestyle`), returning bounded excerpts (`4–6` passages) with verifiable `passage_id` and `source_id` citations.
+   - **Guardrailed Educational Search (`tools.py`, `app/retrieval/engine.py`)**: Scopes Wikipedia and DuckDuckGo strictly to **definitions ("what it is")**, **symptoms**, and **lifestyle prevention**—blocking prescriptions, medication dosing, and prompt injection attempts.
+   - **Offline Discovery Staging (`pipelines/seed_evidence.py`)**: Uses guardrailed Wikipedia and DuckDuckGo searches to stage candidate educational summaries with SHA-256 hashes into `clinical/evidence_manifest/staging_queue.json` for clinical review.
+
+2. **Ephemeral Patient Session Memory (`app/storage/`, `app/schemas/memory.py`)**
+   - **TriState Context Tracking (`app/storage/context_tracker.py`)**: Uses explicit `TriState` (`yes`, `no`, `not_provided`) so missing pregnancy status, medication use, or age never silently become negative findings.
+   - **Clarification Turn Cap**: Enforces a maximum of **2 focused clarification turns**.
+   - **Ephemeral TTL & Deletion Cascades (`app/storage/session_store.py`)**: Short-lived in-memory sessions with enforced TTL expiry, explicit user deletion cascades, and redacted operational audit codes (no autonomous plaintext file writes or raw health logs).
+
+---
+
+## Repository Structure
+
+```text
+├── app/
+│   ├── retrieval/
+│   │   ├── engine.py          # HybridRetrievalEngine & GuardrailedEducationalSearch
+│   │   ├── filters.py         # Pre-retrieval hazard detection, scope guardrails & source eligibility
+│   │   ├── reranker.py        # Hybrid lexical + vector scoring & bounded excerpt selection
+│   │   └── exceptions.py      # UrgentEscalationRequired, ScopeViolationError, InsufficientEvidenceError
+│   ├── schemas/
+│   │   ├── evidence.py        # SourceMetadata, EvidencePassage, EducationalResponse
+│   │   └── memory.py          # TriState, MinimalPatientContext, SessionMemory
+│   └── storage/
+│       ├── consent.py         # ConsentPolicy & TTL rules
+│       ├── context_tracker.py # Safe TriState context extraction & 2-turn clarification cap
+│       └── session_store.py   # EphemeralSessionStore with TTL & deletion cascades
+├── clinical/
+│   └── evidence_manifest/
+│       └── manifest.json      # Versioned, clinician-approved PCOS & menstrual health passages
+├── docs/
+│   ├── IMPLEMENTATION_PLAN.md # Engineering and clinical implementation plan
+│   └── IMPLEMENTATION_PLAN.html # Offline shareable handoff with 8 SVG diagrams
+├── pipelines/
+│   └── seed_evidence.py       # Offline Wikipedia/DuckDuckGo staging pipeline
+├── tests/
+│   └── test_memory_and_retrieval.py # Unit & integration test suite
+├── main.py                    # Controlled workflow entrypoint
+├── tools.py                   # Guardrailed LangChain retrieval & educational search tools
+└── REQUIREMENTS.txt           # Python dependencies
 ```
-├── main.py              # Main application script & agent pipeline
-├── tools.py             # Custom LangChain tools (search, wikipedia, save)
-├── REQUIREMENTS.txt     # Python package dependencies
-├── research_output.txt  # Saved research outputs
-├── .env.example         # Template for environment variables
-└── .gitignore           # Git ignore patterns
-```
 
-## Setup & Installation
+---
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/KANAK0708/Women-s-Health-AI-AGENT.git
-   cd Women-s-Health-AI-AGENT
+## Setup & Usage
+
+1. **Activate virtual environment**:
+   ```powershell
+   .\venv\Scripts\activate
    ```
 
-2. **Create and activate a virtual environment**:
-   ```bash
-   python -m venv venv
-   # On Windows:
-   venv\Scripts\activate
-   # On macOS/Linux:
-   source venv/bin/activate
+2. **Configure environment variables**:
+   Copy `.env.example` to `.env` and set your API keys (`GROQ_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_API_KEY`).
+
+3. **Run the unit and integration test suite**:
+   ```powershell
+   .\venv\Scripts\python.exe -m unittest discover -s tests -v
    ```
 
-3. **Install dependencies**:
-   ```bash
-   pip install -r REQUIREMENTS.txt
+4. **Run the interactive educational assistant**:
+   ```powershell
+   .\venv\Scripts\python.exe main.py
    ```
 
-4. **Configure Environment Variables**:
-   Create a `.env` file in the root directory (based on `.env.example`):
-   ```bash
-   cp .env.example .env
-   ```
-   Add your API keys:
-   ```env
-   GROQ_API_KEY=your_groq_api_key_here
-   GEMINI_API_KEY=your_gemini_api_key_here
-   GOOGLE_API_KEY=your_google_api_key_here
-   ```
+---
 
-5. **Run the Agent**:
-   ```bash
-   python main.py
-   ```
+## Clinical Disclaimer
 
-## Disclaimer
-
-This agent is intended for informational and research purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider for any health-related concerns.
-
-## Implementation plan and team diagrams
-
-See the [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the proposed architecture, clinical safety workflow, evidence lifecycle, validation gates, roadmap, and first-sprint backlog. For an offline shareable version with eight rendered diagrams, open [the HTML handoff](docs/IMPLEMENTATION_PLAN.html) in a browser.
-
-The plan describes proposed work; the current prototype does not yet implement these controls.
+This assistant provides general educational information on menstrual health and PCOS for adults (18+) and cannot establish an individual medical diagnosis, interpret personal lab results, or direct medication changes. Always consult a qualified healthcare professional.
