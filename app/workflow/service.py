@@ -54,7 +54,7 @@ class HealthApplication:
             response_type="abstention" if unavailable else "clarification" if asking else "education",
             disposition="unable_to_assess" if unavailable else "educational",
             answer=transition.message, questions=[transition.message] if asking else [],
-            limitations=[], system_version="tools-orchestration-v0.3.1",
+            limitations=[], system_version="tools-orchestration-v0.3.2",
         ).model_dump(mode="json")
         # Task I/O has its own bounded turn count. It does not consume the two
         # medical-context clarification turns owned by ContextTracker.

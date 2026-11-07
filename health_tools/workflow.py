@@ -64,7 +64,7 @@ class WorkflowResult:
 def select_intent(query: str) -> str:
     """Small transparent router; not a clinical or safety classifier."""
     lowered = query.casefold()
-    if re.search(r"\b(calculate|compute|analyse|analyze|summarize|summary)\b", lowered) and re.search(r"\b(periods?|cycles?|dates?)\b", lowered):
+    if re.search(r"\b(calculate|calculations?|compute|analyse|analyze|summarize|summary)\b", lowered) and re.search(r"\b(periods?|cycles?|dates?)\b", lowered):
         return "cycle_history"
     if re.search(r"\b(pubmed|research|studies|papers|systematic review)\b", lowered):
         return "research"
@@ -105,7 +105,7 @@ class Orchestrator:
             "what_it_is": "", "symptoms": [], "prevention_and_lifestyle": [],
             "answer": "", "claims": [], "questions": [], "next_steps": [],
             "limitations": [], "evidence": [], "protocol_id": None,
-            "system_version": "tools-orchestration-v0.3.1",
+            "system_version": "tools-orchestration-v0.3.2",
         }
 
         def finish(message, *, event, kind="abstention", disposition="unable_to_assess", question=False):
@@ -218,7 +218,7 @@ class Orchestrator:
             return finish("A supported jurisdiction and adult population must be configured.", event="INVALID_RETRIEVAL_SCOPE")
         focus = question_focus(query, active_topic=context.active_topic)
         if focus.needs_topic:
-            return clarify("Which topic do you mean—for example, PCOS or menstrual health?")
+            return clarify("Which topic would you like explained first—PCOS, periods, or cycle calculations?")
         try:
             retrieval_options = dict(jurisdiction=jurisdiction, population=population,
                                      max_excerpts=self.policy.max_passages)

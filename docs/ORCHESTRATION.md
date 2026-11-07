@@ -1,4 +1,4 @@
-# Tools orchestration v0.3.1
+# Tools orchestration v0.3.2
 
 This is the tools owner's first controlled workflow. It builds on the shared
 contract and consumes the teammate's existing retrieval interface. It does not
@@ -33,6 +33,14 @@ added to the stored profile. Mixed introductions plus health questions continue
 to the health workflow. Social turns do not consume medical clarification turns
 or overwrite pending calculation dates. This is narrow English pattern matching,
 not a general conversational model.
+
+Unresolved references such as `explain me everything sbout them` now trigger a
+topic question before retrieval. A plural `them` is not guessed from a single
+active topic. Singular references can reuse a clear retained topic; with no topic
+they also ask for clarification. Explicit overview requests and a bare topic
+choice such as `PCOS` select definition, symptoms, and lifestyle sections, while
+`everything about PCOS symptoms` remains symptoms-only. This is bounded English
+reference handling, not general pronoun resolution or typo correction.
 
 ## Focused answers
 
