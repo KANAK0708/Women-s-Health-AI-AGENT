@@ -19,7 +19,7 @@ MANIFEST_PATH = ROOT_DIR / "clinical" / "evidence_manifest" / "manifest.json"
 
 
 def sync_manifest_to_postgres(database_url: str) -> None:
-    print(f"Connecting to PostgreSQL: {database_url}...")
+    print("Connecting to PostgreSQL...")
     engine = PgVectorHybridEngine(database_url=database_url)
 
     if not engine.ping():

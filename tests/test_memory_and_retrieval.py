@@ -37,12 +37,14 @@ from tools import search_tool, wiki_tool
 
 class TestRetrievalAndGovernance(unittest.TestCase):
     def setUp(self) -> None:
-        self.engine = HybridRetrievalEngine()
+        # Legacy manifest is unverified development material, never production evidence.
+        self.engine = HybridRetrievalEngine(allow_unverified_for_development=True)
 
     def test_superseded_and_expired_sources_excluded(self) -> None:
         eligible_sources = filter_eligible_sources(
             self.engine.sources,
             reference_date=date(2026, 11, 6),
+            allow_unverified_for_development=True,
         )
         self.assertNotIn("src-legacy-pcos-2018", eligible_sources)
         self.assertIn("src-monash-pcos-2023", eligible_sources)
@@ -55,6 +57,7 @@ class TestRetrievalAndGovernance(unittest.TestCase):
         future_eligible = filter_eligible_sources(
             self.engine.sources,
             reference_date=date(2029, 1, 1),
+            allow_unverified_for_development=True,
         )
         self.assertEqual(len(future_eligible), 0)
 
@@ -92,6 +95,13 @@ class TestRetrievalAndGovernance(unittest.TestCase):
     def test_out_of_domain_query_raises_insufficient_evidence(self) -> None:
         with self.assertRaises(InsufficientEvidenceError):
             self.engine.retrieve("How do I rebuild a diesel tractor transmission gearbox?")
+
+        with self.assertRaises(InsufficientEvidenceError):
+            self.engine.retrieve("What are the side effects of taking a completely unrelated widget?")
+
+    def test_unverified_manifest_is_ineligible_by_default(self) -> None:
+        with self.assertRaises(InsufficientEvidenceError):
+            HybridRetrievalEngine().retrieve("What is PCOS?")
 
     def test_educational_query_guardrails_and_sanitization(self) -> None:
         # Allowed educational query gets focused on definition, symptoms, prevention and strips commercial terms
@@ -188,13 +198,18 @@ class TestEndToEndWorkflow(unittest.TestCase):
             "What is PCOS, its symptoms, and how can I manage it with lifestyle habits?",
             enable_llm_generation=False,
         )
-        self.assertEqual(response.response_type, ResponseType.EDUCATION)
-        self.assertEqual(response.disposition, Disposition.EDUCATIONAL)
-        self.assertTrue(len(response.what_it_is) > 20)
-        self.assertGreaterEqual(len(response.symptoms), 1)
-        self.assertGreaterEqual(len(response.prevention_and_lifestyle), 1)
-        self.assertGreaterEqual(len(response.evidence), 1)
-        self.assertIn("RETRIEVAL_SUCCESS", session.audit_codes)
+        self.assertEqual(response.response_type, ResponseType.ABSTENTION)
+        self.assertEqual(response.disposition, Disposition.UNABLE_TO_ASSESS)
+        self.assertEqual(response.evidence, [])
+        self.assertIn("INSUFFICIENT_APPROVED_EVIDENCE", session.audit_codes)
+
+    def test_ipill_question_never_returns_menstrual_lifestyle_passage(self) -> None:
+        response, _ = process_health_query(
+            "what are the side effects of taking an ipill?", enable_llm_generation=False
+        )
+        self.assertEqual(response.response_type, ResponseType.OUT_OF_SCOPE)
+        self.assertEqual(response.evidence, [])
+        self.assertNotIn("warm heating pad", response.answer.lower())
 
     def test_urgent_hazard_preempts_retrieval(self) -> None:
         response, session = process_health_query(

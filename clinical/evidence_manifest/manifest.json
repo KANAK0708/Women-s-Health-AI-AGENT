@@ -1,5 +1,5 @@
 {
-  "manifest_version": "2026.11.06",
+  "manifest_version": "2026.11.07-unverified",
   "sources": [
     {
       "source_id": "src-monash-pcos-2023",
@@ -17,11 +17,12 @@
         "menstrual_health",
         "pcos"
       ],
-      "evidence_grade": "Evidence-Based Consensus",
-      "reviewer_id": "clinician-lead-01",
-      "license": "CC-BY-NC-4.0 Educational Summary",
-      "content_hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-      "is_superseded": false
+      "evidence_grade": null,
+      "reviewer_id": "pending-clinical-review",
+      "license": "Educational summary for development; pending clinical verification",
+      "content_hash": "sha256:6bf0fa5c4e785318a99ebc2d221fb0dc82137699019ebe5b4371f257277d847d",
+      "is_superseded": false,
+      "approval_status": "unverified"
     },
     {
       "source_id": "src-who-pcos-2025",
@@ -40,10 +41,11 @@
         "pcos"
       ],
       "evidence_grade": null,
-      "reviewer_id": "clinician-lead-01",
-      "license": "WHO Public Information",
-      "content_hash": "sha256:4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a",
-      "is_superseded": false
+      "reviewer_id": "pending-clinical-review",
+      "license": "WHO public information summary for development; pending clinical verification",
+      "content_hash": "sha256:841368b9fd55dff5f0ed2ebd3961ce2517b7575d98e244382fb13a8d07f72989",
+      "is_superseded": false,
+      "approval_status": "unverified"
     },
     {
       "source_id": "src-nichd-menstrual-2024",
@@ -61,10 +63,11 @@
         "menstrual_health"
       ],
       "evidence_grade": null,
-      "reviewer_id": "clinician-lead-01",
-      "license": "Public Domain (US Government)",
-      "content_hash": "sha256:ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d",
-      "is_superseded": false
+      "reviewer_id": "pending-clinical-review",
+      "license": "U.S. Government public domain summary for development; pending clinical verification",
+      "content_hash": "sha256:ae672452c353e67f4d0b3480e65332f3bc60b376866bf9c282c08132d9866056",
+      "is_superseded": false,
+      "approval_status": "unverified"
     },
     {
       "source_id": "src-legacy-pcos-2018",
@@ -82,10 +85,11 @@
         "pcos"
       ],
       "evidence_grade": null,
-      "reviewer_id": "clinician-lead-01",
-      "license": "Archived",
-      "content_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-      "is_superseded": true
+      "reviewer_id": "pending-clinical-review",
+      "license": "Archived superseded reference for development testing",
+      "content_hash": "sha256:703b084c7e40576547a9a3b636311b3f935005c4338450b38a54c8326ff5b219",
+      "is_superseded": true,
+      "approval_status": "unverified"
     },
     {
       "source_id": "src-acog-dysmenorrhea-2024",
@@ -102,11 +106,12 @@
       "life_stage": [
         "menstrual_health"
       ],
-      "evidence_grade": "Clinical Consensus",
-      "reviewer_id": "clinician-lead-01",
-      "license": "ACOG Educational Guidance Summary",
-      "content_hash": "sha256:4308f08c341b41fed29e60510fe3d2f18c7049debeedccaeedad9f0c5d8b74f7",
-      "is_superseded": false
+      "evidence_grade": null,
+      "reviewer_id": "pending-clinical-review",
+      "license": "ACOG educational guidance summary for development; pending clinical verification",
+      "content_hash": "sha256:3cd86a052c86c7d832988b290c6f55760da7e32a7b76c7891dcac029a2856e71",
+      "is_superseded": false,
+      "approval_status": "unverified"
     },
     {
       "source_id": "src-cdc-menorrhagia-2024",
@@ -123,11 +128,12 @@
       "life_stage": [
         "menstrual_health"
       ],
-      "evidence_grade": "Public Health Recommendation",
-      "reviewer_id": "clinician-lead-01",
-      "license": "Public Domain (US Government)",
-      "content_hash": "sha256:e14a80ab96bb82db822522056c1ef7054480a02b529280e52c1d9b5521ae3987",
-      "is_superseded": false
+      "evidence_grade": null,
+      "reviewer_id": "pending-clinical-review",
+      "license": "U.S. Government public domain summary for development; pending clinical verification",
+      "content_hash": "sha256:e6fbd613ef6154ba514858d2f08a43410e533e7d9958c59dc992150aeb93a42b",
+      "is_superseded": false,
+      "approval_status": "unverified"
     },
     {
       "source_id": "src-who-endometriosis-2023",
@@ -144,11 +150,12 @@
       "life_stage": [
         "menstrual_health"
       ],
-      "evidence_grade": "Global Health Guidelines",
-      "reviewer_id": "clinician-lead-01",
-      "license": "WHO Public Information",
-      "content_hash": "sha256:e2e213ae882f113aedc1bdaccd99fddb187b974e2e326147bd086b886b5dfc69",
-      "is_superseded": false
+      "evidence_grade": null,
+      "reviewer_id": "pending-clinical-review",
+      "license": "WHO public information summary for development; pending clinical verification",
+      "content_hash": "sha256:72bd90d15047e7e085f3f9ee1807269af28dbced57ce63281348cd5797d01944",
+      "is_superseded": false,
+      "approval_status": "unverified"
     }
   ],
   "passages": [
@@ -485,5 +492,7 @@
       "text": "While there is currently no known primary prevention or permanent cure for endometriosis, supportive non-pharmacological care significantly improves quality of life. Helpful lifestyle habits include consuming a nutrient-dense, anti-inflammatory eating pattern rich in omega-3 fatty acids, colorful vegetables, and antioxidant-rich berries; engaging in gentle, low-impact exercise (such as yoga, walking, and gentle stretching); working with a specialized pelvic floor physical therapist; practicing relaxation and mindfulness techniques to down-regulate centralized pain sensitivity; and using thermal heat therapy during flare-ups.",
       "reviewed_at": "2026-11-06"
     }
-  ]
+  ],
+  "provenance_status": "development_unverified",
+  "provenance_notice": "Passages are development summaries, not verified verbatim excerpts. Source dates, locators, review claims, hashes, and reuse rights have not been independently verified. No source is approved for patient answers."
 }

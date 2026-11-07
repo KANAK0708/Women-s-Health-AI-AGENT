@@ -7,8 +7,8 @@ Implements the P0 & P1 requirements from the Implementation Plan:
 - Separates ephemeral patient session memory (`EphemeralSessionStore`) from the
   governed clinical evidence registry (`HybridRetrievalEngine`).
 - Disables `verbose=True` raw health text logging and autonomous file writes.
-- Uses guardrailed Wikipedia and DuckDuckGo tools strictly for educational
-  definitions, symptoms, and prevention.
+- Abstains when approved evidence is insufficient; discovery search is not in
+  the patient answer path.
 """
 
 import os
@@ -39,7 +39,6 @@ from app.schemas.memory import SessionMemory, TriState
 from app.storage.context_tracker import ContextTracker
 from app.storage.redis_session_store import get_session_store
 from app.verification.verifier import ClaimVerifier, VerificationDecision
-from tools import EDUCATIONAL_TOOLS, search_tool, wiki_tool
 
 load_dotenv()
 sys.stdout.reconfigure(encoding="utf-8")
@@ -127,7 +126,7 @@ def process_health_query(
     query: str,
     *,
     session_id: Optional[str] = None,
-    use_external_search_on_gap: bool = True,
+    use_external_search_on_gap: bool = False,
     enable_llm_generation: bool = True,
 ) -> tuple[EducationalResponse, SessionMemory]:
     """Execute the controlled patient workflow for a single turn:
@@ -135,7 +134,7 @@ def process_health_query(
     2. Run deterministic safety and context tracking (`ContextTracker`).
     3. Enforce adult-only scope and prescription/dosage boundaries.
     4. Retrieve bounded excerpts from the approved evidence manifest.
-    5. Optionally consult guardrailed Wikipedia/DuckDuckGo for definition, symptoms, and prevention.
+    5. Abstain if no approved evidence qualifies.
     6. Return a validated `EducationalResponse` with verified citations.
     """
     request_id = f"req-{uuid.uuid4().hex[:10]}"
@@ -211,39 +210,18 @@ def process_health_query(
         )
     except InsufficientEvidenceError:
         session.audit_codes.append("INSUFFICIENT_APPROVED_EVIDENCE")
-        if not use_external_search_on_gap:
-            session_store.save_session(session)
-            return (
-                EducationalResponse(
-                    request_id=request_id,
-                    response_type=ResponseType.ABSTENTION,
-                    disposition=Disposition.UNABLE_TO_ASSESS,
-                    topic=query,
-                    what_it_is="This topic is outside the currently approved clinical evidence corpus.",
-                    answer=(
-                        "I do not have verified clinical evidence in my approved knowledge base to answer this question safely. "
-                        "Please consult a qualified healthcare professional."
-                    ),
-                ),
-                session,
-            )
-
-        # Consult guardrailed Wikipedia & DuckDuckGo strictly for definition, symptoms, and prevention
-        wiki_res = wiki_tool.invoke(query)
-        ddg_res = search_tool.invoke(query)
-        session.audit_codes.append("GUARDRAILED_EXTERNAL_EDUCATIONAL_LOOKUP")
         session_store.save_session(session)
         return (
             EducationalResponse(
                 request_id=request_id,
-                response_type=ResponseType.EDUCATION,
-                disposition=Disposition.EDUCATIONAL,
+                response_type=ResponseType.ABSTENTION,
+                disposition=Disposition.UNABLE_TO_ASSESS,
                 topic=query,
-                what_it_is=wiki_res,
-                symptoms=["Refer to general educational overview above; consult a clinician for specific symptoms."],
-                prevention_and_lifestyle=[ddg_res],
-                answer=f"{wiki_res}\n\n{ddg_res}",
-                next_steps=["Verify general web/encyclopedia summaries with a licensed healthcare provider."],
+                what_it_is="This topic is outside the currently approved clinical evidence corpus.",
+                answer=(
+                    "I do not have verified clinical evidence in my approved knowledge base to answer this question safely. "
+                    "Please consult a qualified healthcare professional."
+                ),
             ),
             session,
         )

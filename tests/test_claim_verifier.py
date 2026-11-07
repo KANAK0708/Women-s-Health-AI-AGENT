@@ -174,10 +174,17 @@ class TestClaimVerifier(unittest.TestCase):
         self.assertNotIn("c5", [c.id for c in report.repaired_claims])
 
     def test_workflow_integrates_claim_verification(self) -> None:
-        response, session = process_health_query(
-            "What is PCOS and what are its symptoms?",
-            enable_llm_generation=False,
-        )
+        from unittest.mock import patch
+        from app.retrieval.engine import HybridRetrievalEngine
+        import main
+
+        # Exercise verifier wiring only with explicitly marked development evidence.
+        development_engine = HybridRetrievalEngine(allow_unverified_for_development=True)
+        with patch.object(main, "retrieval_engine", development_engine):
+            response, session = process_health_query(
+                "What is PCOS and what are its symptoms?",
+                enable_llm_generation=False,
+            )
         self.assertIn("CLAIM_VERIFICATION_PASSED_100", session.audit_codes)
         self.assertGreaterEqual(len(response.claims), 1)
         for claim in response.claims:

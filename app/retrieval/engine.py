@@ -64,10 +64,11 @@ class RetrievalBundle:
 
 
 class HybridRetrievalEngine:
-    """Governed hybrid (lexical + vector) retrieval engine over approved clinical sources."""
+    """Governed hybrid retrieval; only explicitly approved sources are eligible by default."""
 
-    def __init__(self, manifest_path: Optional[Path] = None) -> None:
+    def __init__(self, manifest_path: Optional[Path] = None, *, allow_unverified_for_development: bool = False) -> None:
         self.manifest_path = manifest_path or DEFAULT_MANIFEST_PATH
+        self.allow_unverified_for_development = allow_unverified_for_development
         self.manifest_version: str = "unknown"
         self.sources: list[SourceMetadata] = []
         self.passages: list[EvidencePassage] = []
@@ -112,6 +113,7 @@ class HybridRetrievalEngine:
             reference_date=reference_date,
             jurisdiction=jurisdiction,
             population=population,
+            allow_unverified_for_development=self.allow_unverified_for_development,
         )
         eligible_passages = filter_eligible_passages(
             self.passages,
@@ -129,9 +131,7 @@ class HybridRetrievalEngine:
         )
 
         if not scored:
-            raise InsufficientEvidenceError(
-                f"No approved clinical passages met coverage threshold for query: '{cleaned_query}'."
-            )
+            raise InsufficientEvidenceError("No eligible passages met the local relevance threshold")
 
         citations: list[EvidenceCitation] = []
         for idx, item in enumerate(scored, start=1):

@@ -11,6 +11,7 @@ import logging
 import unittest
 
 from app.retrieval.pg_vector_engine import PgVectorHybridEngine, get_retrieval_engine
+from app.retrieval.exceptions import InsufficientEvidenceError
 from app.storage.redis_session_store import RedisSessionStore, get_session_store
 from app.storage.session_store import EphemeralSessionStore
 
@@ -36,9 +37,8 @@ class TestDatabaseAdapters(unittest.TestCase):
     def test_retrieval_engine_fallback(self) -> None:
         # With an invalid PostgreSQL URL, factory must fall back to local manifest HybridRetrievalEngine
         engine = get_retrieval_engine(database_url="postgresql://invalid:invalid@127.0.0.1:9999/invalid")
-        bundle = engine.retrieve("What is PCOS?")
-        self.assertGreaterEqual(len(bundle.scored_passages), 1)
-        self.assertGreaterEqual(len(bundle.citations), 1)
+        with self.assertRaises(InsufficientEvidenceError):
+            engine.retrieve("What is PCOS?")
 
     def test_redis_ping_on_unreachable_host(self) -> None:
         store = RedisSessionStore(redis_url="redis://127.0.0.1:9999/0")

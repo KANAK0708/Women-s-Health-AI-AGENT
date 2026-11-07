@@ -35,6 +35,14 @@ SYNONYM_EXPANSIONS: dict[str, list[str]] = {
     "symptom": ["symptoms", "signs", "irregular", "hirsutism", "acne"],
 }
 
+# These words describe the question, not the condition or product being asked about.
+GENERIC_QUERY_TERMS = {
+    "side", "effect", "effects", "taking", "take", "symptom", "symptoms",
+    "sign", "signs", "definition", "overview", "explain", "prevention",
+    "prevent", "lifestyle", "manage", "management", "treatment", "pill",
+    "medicine", "medication", "health", "problem", "problems", "condition",
+}
+
 
 @dataclass(frozen=True)
 class ScoredPassage:
@@ -59,6 +67,12 @@ def tokenize(text: str, *, expand_synonyms: bool = False) -> list[str]:
         if token in SYNONYM_EXPANSIONS:
             expanded.extend(SYNONYM_EXPANSIONS[token])
     return expanded
+
+
+def topic_anchor_terms(query: str) -> list[str]:
+    """Return distinctive topic terms required in a supporting passage."""
+    normalized = re.sub(r"\bi[\s-]?pill\b", "ipill", query.lower())
+    return sorted(set(tokenize(normalized)) - GENERIC_QUERY_TERMS)
 
 
 def compute_hashed_embedding(text: str, dim: int = 256) -> np.ndarray:
@@ -135,7 +149,8 @@ def rerank_passages(
         return []
 
     query_tokens = tokenize(query, expand_synonyms=True)
-    if not query_tokens:
+    anchors = topic_anchor_terms(query)
+    if not query_tokens or not anchors:
         return []
 
     query_vec = compute_hashed_embedding(query)
@@ -158,6 +173,8 @@ def rerank_passages(
 
     for idx, passage in enumerate(candidates):
         t_set = doc_token_sets[idx]
+        if not t_set.intersection(anchors):
+            continue
         tag_tokens = set(tokenize(" ".join(passage.topic_tags), expand_synonyms=False))
 
         # 1. Lexical IDF-weighted overlap score

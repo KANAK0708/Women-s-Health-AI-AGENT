@@ -41,6 +41,10 @@ URGENT_HAZARD_PATTERNS: list[tuple[re.Pattern[str], str, str]] = [
 # Disallowed clinical/diagnostic/prescription patterns outside educational scope
 DISALLOWED_CLINICAL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (
+        re.compile(r"\b(?:i[\s-]?pill|levonorgestrel|emergency\s+contracepti(?:on|ve)|morning[\s-]+after\s+pill)\b", re.IGNORECASE),
+        "Emergency contraception advice is outside the validated educational corpus.",
+    ),
+    (
         re.compile(
             r"\b(should\s+i\s+stop\s+(?:taking|my)|stop\s+my\s+prescribed|"
             r"(?:change|double|increase|decrease|halve|adjust)\s+(?:the|my)?\s*(?:dose|dosage)|"
@@ -129,12 +133,15 @@ def filter_eligible_sources(
     jurisdiction: str = "Global",
     population: str = "adults_18+",
     life_stage_filter: Optional[str] = None,
+    allow_unverified_for_development: bool = False,
 ) -> dict[str, SourceMetadata]:
     """Return a mapping of source_id -> SourceMetadata for approved, current, non-superseded sources."""
     today = reference_date or date.today()
     eligible: dict[str, SourceMetadata] = {}
 
     for src in sources:
+        if src.approval_status != "approved" and not allow_unverified_for_development:
+            continue
         if src.is_superseded:
             continue
         if src.expiry_date < today:

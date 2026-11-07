@@ -9,6 +9,7 @@ Implements Section 3, Section 8, and Section 9 of the Implementation Plan:
 
 import json
 import logging
+import math
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -51,8 +52,8 @@ class RedisSessionStore:
         """Check if Redis connection is active."""
         try:
             return bool(self._client.ping())
-        except Exception as exc:
-            logger.warning("Redis ping failed: %s", exc)
+        except Exception:
+            logger.warning("Redis ping failed")
             return False
 
     def create_session(
@@ -101,8 +102,8 @@ class RedisSessionStore:
                 self.delete_session(session_id)
                 return None
             return session
-        except Exception as exc:
-            logger.error("Failed to deserialize Redis session: %s", exc)
+        except Exception:
+            logger.error("Failed to deserialize Redis session")
             self.delete_session(session_id)
             return None
 
@@ -114,7 +115,7 @@ class RedisSessionStore:
     ) -> SessionMemory:
         """Save updated session state, preserving remaining TTL."""
         current_time = now or datetime.now(timezone.utc)
-        remaining_seconds = int((session.expires_at - current_time).total_seconds())
+        remaining_seconds = math.ceil((session.expires_at - current_time).total_seconds())
 
         if remaining_seconds <= 0:
             self.delete_session(session.session_id)
@@ -156,9 +157,9 @@ def get_session_store(
             store = RedisSessionStore(redis_url=target_url, default_ttl_minutes=default_ttl_minutes)
             if store.ping():
                 return store
-            logger.warning("Redis at %s unreachable, falling back to in-memory session store.", target_url)
-        except Exception as exc:
-            logger.warning("Failed connecting to Redis: %s. Using in-memory fallback.", exc)
+            logger.warning("Redis unreachable; using in-memory session store")
+        except Exception:
+            logger.warning("Failed connecting to Redis; using in-memory session store")
 
     return EphemeralSessionStore(default_ttl_minutes=default_ttl_minutes)
 

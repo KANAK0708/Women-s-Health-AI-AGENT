@@ -2,7 +2,7 @@
 
 Implements Section 2, Section 6, and Section 8 of the Implementation Plan:
 - Governed source metadata with supersession, expiry, jurisdiction, and population.
-- Versioned evidence passages with verbatim text and section locators.
+- Versioned evidence passages with review status governed by source metadata.
 - Non-diagnostic EducationalResponse schema focused on:
   1. Definition ('what_it_is')
   2. Recognized symptoms ('symptoms')
@@ -39,7 +39,7 @@ class Disposition(str, Enum):
 
 
 class SourceMetadata(BaseModel):
-    """Governed metadata for an approved clinical or public-health source."""
+    """Governed metadata; approval must be explicit, never inferred from a URL."""
 
     source_id: str
     publisher: str
@@ -61,10 +61,11 @@ class SourceMetadata(BaseModel):
     license: str
     content_hash: str
     is_superseded: bool = False
+    approval_status: str = Field(default="unverified", pattern="^(unverified|approved)$")
 
 
 class EvidencePassage(BaseModel):
-    """A single versioned, verbatim excerpt from an approved source."""
+    """A versioned passage; the source record controls approval eligibility."""
 
     passage_id: str
     source_id: str
@@ -73,7 +74,7 @@ class EvidencePassage(BaseModel):
     locator: str = Field(description="Exact section or page locator")
     category: EducationalCategory
     topic_tags: list[str] = Field(default_factory=list)
-    text: str = Field(description="Exact verbatim text from the source")
+    text: str = Field(description="Stored passage text; may be a development summary")
     reviewed_at: date
     embedding: Optional[list[float]] = Field(default=None, exclude=True)
 

@@ -1,7 +1,7 @@
 """PostgreSQL + pgvector Hybrid Retrieval Engine.
 
 Implements Section 3 and Section 6 of the Implementation Plan:
-- Stores approved clinical sources and versioned passages in PostgreSQL.
+- Stores versioned clinical source candidates and passages in PostgreSQL.
 - Uses pgvector (vector cosine distance '<=>') combined with PostgreSQL Full-Text Search (tsvector + ts_rank_cd).
 - Enforces deterministic pre-filters (non-superseded, non-expired, adult population, jurisdiction) in SQL.
 - Provides atomic ingestion from manifest.json.
@@ -22,11 +22,12 @@ from psycopg2.extras import RealDictCursor
 from app.retrieval.engine import HybridRetrievalEngine, RetrievalBundle
 from app.retrieval.exceptions import InsufficientEvidenceError
 from app.retrieval.filters import validate_educational_query_scope
-from app.retrieval.reranker import ScoredPassage, compute_hashed_embedding
+from app.retrieval.reranker import ScoredPassage, compute_hashed_embedding, topic_anchor_terms, tokenize
 from app.schemas.evidence import (
     EducationalCategory,
     EvidenceCitation,
     EvidencePassage,
+    SourceMetadata,
 )
 
 logger = logging.getLogger(__name__)
@@ -55,8 +56,11 @@ CREATE TABLE IF NOT EXISTS clinical_sources (
     reviewer_id TEXT NOT NULL,
     license TEXT NOT NULL,
     content_hash TEXT NOT NULL,
-    is_superseded BOOLEAN NOT NULL DEFAULT FALSE
+    is_superseded BOOLEAN NOT NULL DEFAULT FALSE,
+    approval_status TEXT NOT NULL DEFAULT 'unverified'
 );
+
+ALTER TABLE clinical_sources ADD COLUMN IF NOT EXISTS approval_status TEXT NOT NULL DEFAULT 'unverified';
 
 CREATE INDEX IF NOT EXISTS idx_sources_eligibility 
 ON clinical_sources (is_superseded, expiry_date, population);
@@ -79,6 +83,11 @@ CREATE TABLE IF NOT EXISTS clinical_passages (
 
 CREATE INDEX IF NOT EXISTS idx_passages_tsv ON clinical_passages USING gin(tsv);
 CREATE INDEX IF NOT EXISTS idx_passages_category ON clinical_passages(category);
+
+CREATE TABLE IF NOT EXISTS evidence_registry_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 """
 
 
@@ -87,6 +96,7 @@ class PgVectorHybridEngine:
 
     def __init__(self, database_url: Optional[str] = None) -> None:
         self.database_url = database_url or os.getenv(DATABASE_URL_ENV, DEFAULT_DATABASE_URL)
+        self._schema_ready = False
 
     def _get_raw_connection(self) -> psycopg2.extensions.connection:
         return psycopg2.connect(self.database_url, connect_timeout=3)
@@ -110,8 +120,8 @@ class PgVectorHybridEngine:
                 with conn.cursor() as cur:
                     cur.execute("SELECT 1;")
                     return True
-        except Exception as exc:
-            logger.warning("PostgreSQL ping failed: %s", exc)
+        except Exception:
+            logger.warning("PostgreSQL ping failed")
             return False
 
     def init_schema(self) -> None:
@@ -120,41 +130,69 @@ class PgVectorHybridEngine:
             with conn.cursor() as cur:
                 cur.execute(SCHEMA_SQL)
             conn.commit()
+        self._schema_ready = True
 
     def sync_from_manifest(self, manifest_path: Path) -> tuple[int, int]:
         """Atomically upsert all sources and passages from a manifest.json file."""
         self.init_schema()
         raw = json.loads(manifest_path.read_text(encoding="utf-8"))
 
-        sources_data = raw.get("sources", [])
-        passages_data = raw.get("passages", [])
+        sources_data = [SourceMetadata.model_validate(item).model_dump(mode="json") for item in raw.get("sources", [])]
+        passages_data = [EvidencePassage.model_validate(item).model_dump(mode="json") for item in raw.get("passages", [])]
+        manifest_version = raw.get("manifest_version")
+        if not manifest_version:
+            raise ValueError("Manifest version is required")
+        source_ids = {item["source_id"] for item in sources_data}
+        passage_ids = {item["passage_id"] for item in passages_data}
+        if len(source_ids) != len(sources_data) or len(passage_ids) != len(passages_data):
+            raise ValueError("Manifest source and passage IDs must be unique")
+        if any(item["source_id"] not in source_ids for item in passages_data):
+            raise ValueError("Every passage must reference a source in the manifest")
+        for source in sources_data:
+            if source["approval_status"] == "approved" and any(
+                str(source[field]).strip().upper() == "UNVERIFIED"
+                for field in ("reviewer_id", "license", "content_hash")
+            ):
+                raise ValueError("Approved sources require verified reviewer, rights, and content hash metadata")
 
         with self._get_connection() as conn:
             with conn.cursor() as cur:
                 # 1. Upsert Sources
                 for s in sources_data:
+                    s = {**s, "approval_status": s.get("approval_status", "unverified")}
                     cur.execute(
                         """
                         INSERT INTO clinical_sources (
                             source_id, publisher, title, canonical_url,
                             publication_date, update_date, ingestion_date, review_date,
                             expiry_date, jurisdiction, population, life_stage,
-                            evidence_grade, reviewer_id, license, content_hash, is_superseded
+                            evidence_grade, reviewer_id, license, content_hash, is_superseded,
+                            approval_status
                         ) VALUES (
                             %(source_id)s, %(publisher)s, %(title)s, %(canonical_url)s,
                             %(publication_date)s, %(update_date)s, %(ingestion_date)s, %(review_date)s,
                             %(expiry_date)s, %(jurisdiction)s, %(population)s, %(life_stage)s,
-                            %(evidence_grade)s, %(reviewer_id)s, %(license)s, %(content_hash)s, %(is_superseded)s
+                            %(evidence_grade)s, %(reviewer_id)s, %(license)s, %(content_hash)s, %(is_superseded)s,
+                            %(approval_status)s
                         )
                         ON CONFLICT (source_id) DO UPDATE SET
                             publisher = EXCLUDED.publisher,
                             title = EXCLUDED.title,
                             canonical_url = EXCLUDED.canonical_url,
+                            publication_date = EXCLUDED.publication_date,
+                            ingestion_date = EXCLUDED.ingestion_date,
                             update_date = EXCLUDED.update_date,
                             review_date = EXCLUDED.review_date,
                             expiry_date = EXCLUDED.expiry_date,
+                            jurisdiction = EXCLUDED.jurisdiction,
+                            population = EXCLUDED.population,
+                            life_stage = EXCLUDED.life_stage,
+                            evidence_grade = EXCLUDED.evidence_grade,
+                            reviewer_id = EXCLUDED.reviewer_id,
+                            license = EXCLUDED.license,
                             is_superseded = EXCLUDED.is_superseded,
-                            content_hash = EXCLUDED.content_hash;
+                            content_hash = EXCLUDED.content_hash,
+                            approval_status = EXCLUDED.approval_status;
                         """,
                         s,
                     )
@@ -176,6 +214,7 @@ class PgVectorHybridEngine:
                             %(category)s, %(topic_tags)s, %(text)s, %(reviewed_at)s, %(embedding)s
                         )
                         ON CONFLICT (passage_id) DO UPDATE SET
+                            source_id = EXCLUDED.source_id,
                             title = EXCLUDED.title,
                             url = EXCLUDED.url,
                             locator = EXCLUDED.locator,
@@ -187,6 +226,15 @@ class PgVectorHybridEngine:
                         """,
                         {**p, "embedding": embedding},
                     )
+
+                # The supplied manifest is the complete registry snapshot.
+                cur.execute("DELETE FROM clinical_passages WHERE passage_id <> ALL(%s);", ([p["passage_id"] for p in passages_data],))
+                cur.execute("DELETE FROM clinical_sources WHERE source_id <> ALL(%s);", ([s["source_id"] for s in sources_data],))
+                cur.execute(
+                    "INSERT INTO evidence_registry_meta (key, value) VALUES ('manifest_version', %s) "
+                    "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+                    (manifest_version,),
+                )
 
             conn.commit()
 
@@ -202,16 +250,22 @@ class PgVectorHybridEngine:
         reference_date: Optional[date] = None,
         max_excerpts: int = 6,
         min_score_threshold: float = 0.12,
+        allow_unverified_for_development: bool = False,
     ) -> RetrievalBundle:
         """Perform hybrid (tsvector + pgvector) search with clinical pre-filters."""
         cleaned_query = validate_educational_query_scope(query)
         today = reference_date or date.today()
         query_vec = compute_hashed_embedding(cleaned_query).tolist()
-
-        # Build sanitized tsquery words
-        ts_terms = " | ".join(w for w in cleaned_query.replace("'", " ").split() if len(w) > 2)
-        if not ts_terms:
-            ts_terms = "pcos | menstrual"
+        anchors = topic_anchor_terms(cleaned_query)
+        if not anchors:
+            raise InsufficientEvidenceError("No supported topic was identified in the request")
+        # to_tsquery receives only tokenized terms; raw punctuation never reaches its grammar.
+        ts_terms = " | ".join(tokenize(cleaned_query))
+        topic_terms = " | ".join(anchors)
+        if not 0.0 < min_score_threshold <= 1.0:
+            raise ValueError("min_score_threshold must be between 0 and 1")
+        if not self._schema_ready:
+            self.init_schema()
 
         category_filter = "AND p.category = %(category)s" if category else ""
 
@@ -219,6 +273,7 @@ class PgVectorHybridEngine:
         SELECT 
             p.passage_id, p.source_id, p.title, p.url, p.locator, p.category,
             p.topic_tags, p.text, p.reviewed_at,
+            (SELECT value FROM evidence_registry_meta WHERE key = 'manifest_version') AS manifest_version,
             ts_rank_cd(p.tsv, to_tsquery('english', %(ts_terms)s)) AS lexical_score,
             (1.0 - (p.embedding <=> %(query_vec)s::vector)) AS vector_score,
             (
@@ -228,9 +283,12 @@ class PgVectorHybridEngine:
         FROM clinical_passages p
         JOIN clinical_sources s ON p.source_id = s.source_id
         WHERE s.is_superseded = FALSE
+          AND (%(allow_unverified)s OR s.approval_status = 'approved')
           AND s.expiry_date >= %(today)s
           AND s.population = %(population)s
           AND s.jurisdiction IN (%(jurisdiction)s, 'Global')
+          AND (p.tsv @@ to_tsquery('english', %(topic_terms)s)
+               OR to_tsvector('english', array_to_string(p.topic_tags, ' ')) @@ to_tsquery('english', %(topic_terms)s))
           {category_filter}
         ORDER BY hybrid_score DESC
         LIMIT %(limit)s;
@@ -239,6 +297,8 @@ class PgVectorHybridEngine:
         params: dict[str, Any] = {
             "query_vec": query_vec,
             "ts_terms": ts_terms,
+            "topic_terms": topic_terms,
+            "allow_unverified": allow_unverified_for_development,
             "today": today,
             "population": population,
             "jurisdiction": jurisdiction,
@@ -252,10 +312,9 @@ class PgVectorHybridEngine:
                 cur.execute(sql, params)
                 rows = cur.fetchall()
 
+        rows = [row for row in rows if row["hybrid_score"] is not None and float(row["hybrid_score"]) >= min_score_threshold]
         if not rows:
-            raise InsufficientEvidenceError(
-                f"No approved clinical passages in PostgreSQL met coverage threshold for query: '{cleaned_query}'."
-            )
+            raise InsufficientEvidenceError("No eligible passages met the PostgreSQL relevance threshold")
 
         scored_passages: list[ScoredPassage] = []
         citations: list[EvidenceCitation] = []
@@ -296,7 +355,7 @@ class PgVectorHybridEngine:
 
         return RetrievalBundle(
             query=cleaned_query,
-            manifest_version="pgvector-live",
+            manifest_version=rows[0]["manifest_version"] or "unknown",
             scored_passages=scored_passages,
             citations=citations,
         )
@@ -319,9 +378,9 @@ def get_retrieval_engine(
             engine = PgVectorHybridEngine(database_url=target_url)
             if engine.ping():
                 return engine
-            logger.warning("PostgreSQL at %s unreachable, falling back to local manifest retrieval engine.", target_url)
-        except Exception as exc:
-            logger.warning("Failed connecting to PostgreSQL: %s. Using local fallback.", exc)
+            logger.warning("PostgreSQL unreachable; using local retrieval eligibility rules")
+        except Exception:
+            logger.warning("Failed connecting to PostgreSQL; using local retrieval eligibility rules")
 
     return HybridRetrievalEngine()
 
