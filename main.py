@@ -27,6 +27,7 @@ from app.retrieval.exceptions import (
     ScopeViolationError,
     UrgentEscalationRequired,
 )
+from app.retrieval.pg_vector_engine import get_retrieval_engine
 from app.schemas.evidence import (
     ClaimItem,
     Disposition,
@@ -36,7 +37,7 @@ from app.schemas.evidence import (
 )
 from app.schemas.memory import SessionMemory, TriState
 from app.storage.context_tracker import ContextTracker
-from app.storage.session_store import EphemeralSessionStore
+from app.storage.redis_session_store import get_session_store
 from app.verification.verifier import ClaimVerifier, VerificationDecision
 from tools import EDUCATIONAL_TOOLS, search_tool, wiki_tool
 
@@ -44,9 +45,9 @@ load_dotenv()
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
 
-# Initialize isolated trust domains
-session_store = EphemeralSessionStore()
-retrieval_engine = HybridRetrievalEngine()
+# Initialize isolated trust domains (auto-detects PostgreSQL + pgvector and Redis)
+session_store = get_session_store()
+retrieval_engine = get_retrieval_engine()
 claim_verifier = ClaimVerifier()
 parser = PydanticOutputParser(pydantic_object=EducationalResponse)
 

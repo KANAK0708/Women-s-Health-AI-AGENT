@@ -10,3 +10,6 @@ ddgs
 wikipedia
 python-dotenv
 pydantic
+redis
+pgvector
+psycopg2-binary

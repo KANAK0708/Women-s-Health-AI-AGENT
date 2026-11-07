@@ -6,6 +6,7 @@ from app.storage.consent import (
     ConsentPolicy,
 )
 from app.storage.context_tracker import ContextTracker
+from app.storage.redis_session_store import RedisSessionStore, get_session_store
 from app.storage.session_store import EphemeralSessionStore
 
 __all__ = [
@@ -14,5 +15,8 @@ __all__ = [
     "ContextTracker",
     "DEFAULT_SESSION_TTL_MINUTES",
     "EphemeralSessionStore",
+    "RedisSessionStore",
+    "get_session_store",
 ]
+
 

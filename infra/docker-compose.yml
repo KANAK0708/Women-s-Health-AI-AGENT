@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # Trust Domain 1: Clinical Evidence Knowledge Base with pgvector
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: womens_health_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: womens_health_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d womens_health_ai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Trust Domain 2: Ephemeral Patient Session Memory with hardware-level TTL
+  redis:
+    image: redis:7-alpine
+    container_name: womens_health_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:
