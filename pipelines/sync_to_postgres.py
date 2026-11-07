@@ -42,3 +42,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     sync_manifest_to_postgres(args.url)
+

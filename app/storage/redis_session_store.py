@@ -161,3 +161,4 @@ def get_session_store(
             logger.warning("Failed connecting to Redis: %s. Using in-memory fallback.", exc)
 
     return EphemeralSessionStore(default_ttl_minutes=default_ttl_minutes)
+

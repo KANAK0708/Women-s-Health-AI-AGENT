@@ -7,6 +7,7 @@ Verifies:
 4. PgVectorHybridEngine ping handles invalid/unreachable hosts cleanly.
 """
 
+import logging
 import unittest
 
 from app.retrieval.pg_vector_engine import PgVectorHybridEngine, get_retrieval_engine
@@ -15,6 +16,12 @@ from app.storage.session_store import EphemeralSessionStore
 
 
 class TestDatabaseAdapters(unittest.TestCase):
+    def setUp(self) -> None:
+        # Suppress expected fallback warning logs during negative connectivity tests
+        logging.disable(logging.ERROR)
+
+    def tearDown(self) -> None:
+        logging.disable(logging.NOTSET)
     def test_session_store_fallback(self) -> None:
         # With an invalid Redis URL, factory must fall back gracefully to EphemeralSessionStore
         store = get_session_store(redis_url="redis://127.0.0.1:9999/0")
@@ -44,3 +51,4 @@ class TestDatabaseAdapters(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

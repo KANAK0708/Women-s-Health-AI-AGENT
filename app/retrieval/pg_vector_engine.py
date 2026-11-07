@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS clinical_passages (
     reviewed_at DATE NOT NULL,
     embedding vector({EMBEDDING_DIM}),
     tsv tsvector GENERATED ALWAYS AS (
-        to_tsvector('english', coalesce(title, '') || ' ' || array_to_string(topic_tags, ' ') || ' ' || coalesce(text, ''))
+        to_tsvector('english', coalesce(title, '') || ' ' || coalesce(text, ''))
     ) STORED
 );
 
@@ -88,15 +88,25 @@ class PgVectorHybridEngine:
     def __init__(self, database_url: Optional[str] = None) -> None:
         self.database_url = database_url or os.getenv(DATABASE_URL_ENV, DEFAULT_DATABASE_URL)
 
+    def _get_raw_connection(self) -> psycopg2.extensions.connection:
+        return psycopg2.connect(self.database_url, connect_timeout=3)
+
     def _get_connection(self) -> psycopg2.extensions.connection:
-        conn = psycopg2.connect(self.database_url, connect_timeout=3)
-        register_vector(conn)
+        conn = self._get_raw_connection()
+        try:
+            register_vector(conn)
+        except Exception:
+            # Self-healing: if extension was not yet registered, ensure it exists
+            with conn.cursor() as cur:
+                cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+            conn.commit()
+            register_vector(conn)
         return conn
 
     def ping(self) -> bool:
-        """Check if PostgreSQL connection and pgvector extension are available."""
+        """Check if PostgreSQL database is reachable."""
         try:
-            with self._get_connection() as conn:
+            with self._get_raw_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute("SELECT 1;")
                     return True
@@ -106,7 +116,7 @@ class PgVectorHybridEngine:
 
     def init_schema(self) -> None:
         """Create tables, indexes, and pgvector extension if they do not exist."""
-        with self._get_connection() as conn:
+        with self._get_raw_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(SCHEMA_SQL)
             conn.commit()
@@ -314,3 +324,4 @@ def get_retrieval_engine(
             logger.warning("Failed connecting to PostgreSQL: %s. Using local fallback.", exc)
 
     return HybridRetrievalEngine()
+
