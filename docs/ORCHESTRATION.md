@@ -1,4 +1,4 @@
-# Tools orchestration v0.1
+# Tools orchestration v0.2
 
 This is the tools owner's first controlled workflow. It builds on the shared
 contract and consumes the teammate's existing retrieval interface. It does not
@@ -24,6 +24,40 @@ tracker, session store, and retrieval engine. It is not a clinically validated a
    exact retrieved excerpts and one-to-one citations. Missing categories stay
    empty; no generic symptoms or lifestyle advice is inserted.
 8. Render that same answer object as plain text without a second model rewrite.
+
+## Focused answers
+
+`health_tools/answer_selection.py` identifies definition, assessment, symptoms,
+lifestyle, and care-navigation sections using explicit English patterns. Single
+category questions pass the category to the existing retrieval API; mixed
+questions use one bounded retrieval call and select from its result.
+
+Only the highest-ranked matching passage per requested section is shown. Text is
+kept intact, with its original citation ID and locator. Diagnostic/assessment
+locators are excluded from general definitions unless assessment was requested.
+Unselected passages are removed from both claims and visible citations. Examples:
+
+```bash
+python3 main.py --query "What are PCOS symptoms?"
+python3 main.py --query "What is PCOS and what are its symptoms?"
+python3 main.py --query "How can I manage PCOS with diet and exercise?"
+```
+
+These produce symptoms only, definition plus symptoms, and lifestyle only,
+respectively. Explicit broad overviews can include all three sections. When some
+requested sections are missing, the response labels those gaps; when all are
+missing, it abstains instead of substituting a different category.
+
+Elliptical follow-ups such as `What about exercise?` add the consented active topic
+to the retrieval query only. They do not rewrite the user message passed to safety
+checks. Without an available topic the workflow asks for one. Explicit topic
+changes and unrelated questions do not automatically inherit the prior topic.
+Retention opt-out, deletion, and expiry remove this follow-up context.
+
+Selection is category/locator matching, not a general semantic answer-completeness
+test. A matching paragraph may still contain context beyond a narrow question;
+it is not shortened because that could remove qualifiers. Retrieval ranking and
+clinical applicability still need evaluation. No LLM paraphrasing is introduced.
 
 The intent router is deliberately small, English-only, and deterministic. It is
 not a medical classifier or a general language understanding system. Safety and

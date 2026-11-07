@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 from app.retrieval.exceptions import ScopeViolationError, UrgentEscalationRequired
 from app.retrieval.filters import validate_educational_query_scope
-from app.schemas.evidence import EducationalResponse
+from app.schemas.evidence import EducationalCategory, EducationalResponse
 from app.schemas.memory import MinimalPatientContext
 from app.storage.consent import ConsentPolicy
 from app.storage.context_tracker import ContextTracker
@@ -58,6 +58,8 @@ class HealthApplication:
         return replace(result, response=fallback, events=result.events + (event,))
 
     def _retrieve(self, query, **kwargs):
+        if "category" in kwargs:
+            kwargs["category"] = EducationalCategory(kwargs["category"])
         if self._retrieve_callback is not None:
             return self._retrieve_callback(query, **kwargs)
         # Initialization is lazy: an urgent response must not depend on a working

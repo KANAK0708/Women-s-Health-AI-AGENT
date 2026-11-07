@@ -120,7 +120,7 @@ class ApplicationIntegrationTests(unittest.TestCase):
 
     def test_cli_json_education_and_cycle(self):
         for args, expected in (
-            (["--query", "What is PCOS?"], "Retrieved evidence excerpts:"),
+            (["--query", "What is PCOS?"], "What it is\n"),
             (["--query", "Calculate cycle", "--period-starts", "2026-08-01", "2026-09-05", "--as-of", "2026-11-06"], "35 days"),
             (["--query", "Find PCOS research"], "May I search PubMed"),
         ):
@@ -138,7 +138,7 @@ class ApplicationIntegrationTests(unittest.TestCase):
                              text=True, timeout=20)
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertIn("Session context deleted.", run.stdout)
-        self.assertIn("Retrieved evidence excerpts:", run.stdout)
+        self.assertIn("What it is\n", run.stdout)
 
 
 if __name__ == "__main__":

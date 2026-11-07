@@ -11,6 +11,7 @@ No API key or model call is needed for local evidence and calculations.
 
 ```bash
 python3 main.py --query "What is PCOS and what are its symptoms?"
+python3 main.py --query "What are PCOS symptoms?"
 python3 main.py --query "Calculate my cycle intervals" --period-starts 2026-08-01 2026-09-05 2026-10-08 --as-of 2026-11-06
 python3 main.py --query "Find PCOS research" --allow-external-research --research-query "PCOS systematic review"
 python3 main.py --remember
@@ -23,6 +24,10 @@ separately provided research query to NCBI; exclude personal details.
 See [the orchestration guide](docs/ORCHESTRATION.md) and
 [the shared team contract](docs/TEAM_CONTRACT.md) for ownership and integration.
 The standalone `workflow_demo` commands remain synthetic demonstrations.
+
+Answers now select the requested sections rather than displaying the whole
+retrieval bundle. Missing sections are identified explicitly. Follow-ups such as
+`What about exercise?` use the active topic only when session context is available.
 
 
 ## Implementation Plan and Team Diagrams

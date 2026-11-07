@@ -14,6 +14,7 @@ from .contracts import ToolResult
 from .cycle_history import analyze_cycle_history
 from .handoff import ContextSnapshot, EvidenceSnapshot, adapt_retrieval, adapt_session, validate_claim_references
 from .pubmed import search_pubmed
+from .answer_selection import FACETS, question_focus, select_passages
 
 
 @dataclass(frozen=True)
@@ -103,7 +104,7 @@ class Orchestrator:
             "what_it_is": "", "symptoms": [], "prevention_and_lifestyle": [],
             "answer": "", "claims": [], "questions": [], "next_steps": [],
             "limitations": [], "evidence": [], "protocol_id": None,
-            "system_version": "tools-orchestration-v0.1",
+            "system_version": "tools-orchestration-v0.2",
         }
 
         def finish(message, *, event, kind="abstention", disposition="unable_to_assess", question=False):
@@ -208,11 +209,17 @@ class Orchestrator:
 
         if not isinstance(jurisdiction, str) or not jurisdiction.strip() or population != "adults_18+":
             return finish("A supported jurisdiction and adult population must be configured.", event="INVALID_RETRIEVAL_SCOPE")
+        focus = question_focus(query, active_topic=context.active_topic)
+        if focus.needs_topic:
+            return clarify("Which topic do you mean—for example, PCOS or menstrual health?")
         try:
+            retrieval_options = dict(jurisdiction=jurisdiction, population=population,
+                                     max_excerpts=self.policy.max_passages)
+            requested_categories = {FACETS[facet][0] for facet in focus.facets}
+            if len(requested_categories) == 1:
+                retrieval_options["category"] = next(iter(requested_categories))
             bundle = call_tool("approved_retrieval", lambda: self.retrieve(
-                query, jurisdiction=jurisdiction, population=population,
-                max_excerpts=self.policy.max_passages,
-            ))
+                focus.retrieval_query, **retrieval_options))
             if bundle is None:
                 return finish("Approved-evidence retrieval is disabled or its call limit was reached.", event="RETRIEVAL_BLOCKED")
             evidence = adapt_retrieval(bundle)
@@ -222,13 +229,19 @@ class Orchestrator:
                 raise ValueError("Retrieval exceeded configured bounds")
             if not evidence.passages:
                 return finish("I do not have matching approved evidence to answer this question.", event="EVIDENCE_EMPTY")
-            self._populate_evidence(response, evidence)
+            selected, missing = select_passages(evidence, focus)
+            if not selected:
+                labels = ", ".join(FACETS[facet][1].lower() for facet in missing)
+                return finish(f"I do not have a retrieved passage covering {labels} for this question.", event="FOCUSED_EVIDENCE_EMPTY")
+            filtered = EvidenceSnapshot(evidence.manifest_version, tuple(item for _, item in selected))
+            self._populate_evidence(response, filtered, selected, missing)
+            events.append("ANSWER_FOCUSED")
         except Exception:
             return finish("Approved evidence could not be validated or retrieved. I cannot provide an evidence-based answer for this request.", event="RETRIEVAL_FAILED")
         return finish(response["answer"], event="EVIDENCE_COMPLETE", kind="education", disposition="educational")
 
     @staticmethod
-    def _populate_evidence(response: dict, evidence: EvidenceSnapshot):
+    def _populate_evidence(response: dict, evidence: EvidenceSnapshot, selected, missing):
         claims = [dict(id=f"c{index}", text=item.text, evidence_ids=[item.citation_id])
                   for index, item in enumerate(evidence.passages, 1)]
         validate_claim_references(claims, evidence)
@@ -245,25 +258,29 @@ class Orchestrator:
             what_it_is="\n\n".join(definitions),
             symptoms=[item.text for item in evidence.passages if item.category == "symptoms"],
             prevention_and_lifestyle=[item.text for item in evidence.passages if item.category == "prevention_and_lifestyle"],
-            answer="Retrieved evidence excerpts:\n\n" + "\n\n".join(
-                f"[{item.citation_id}] {item.text}" for item in evidence.passages),
+            answer="\n\n".join(
+                f"{FACETS[facet][1]}\n[{item.citation_id}] {item.text}" for facet, item in selected),
             limitations=[
                 "Exact retrieved excerpts are shown; individual applicability has not been established.",
                 "This response does not establish a diagnosis or prescribe treatment.",
                 f"Evidence manifest: {evidence.manifest_version}",
             ],
         )
+        if missing:
+            note = "Not covered by the retrieved evidence: " + ", ".join(FACETS[facet][1].lower() for facet in missing) + "."
+            response["answer"] += "\n\n" + note
+            response["limitations"].append(note)
 
 
 def render_response(result: WorkflowResult) -> str:
     """Plain-text view of the same final object; no second model/claim rewrite."""
     response = result.response
-    lines = [response["answer"]]
+    sections = [response["answer"]]
     if response["evidence"]:
-        lines.append("Sources:")
-        lines.extend(f"[{item['id']}] {item['title']} — {item['locator']}\n{item['url']}"
-                     for item in response["evidence"])
-    if response["limitations"]:
-        lines.append("Limitations:")
-        lines.extend(f"- {item}" for item in response["limitations"])
-    return "\n\n".join(lines)
+        sections.append("Sources:\n" + "\n".join(
+            f"[{item['id']}] {item['title']} — {item['locator']}\n{item['url']}"
+            for item in response["evidence"]))
+    visible_limits = [item for item in response["limitations"] if item not in response["answer"]]
+    if visible_limits:
+        sections.append("Limitations:\n" + "\n".join(f"- {item}" for item in visible_limits))
+    return "\n\n".join(sections)

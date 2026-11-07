@@ -16,6 +16,13 @@ def create_upstream_orchestrator(*, safety_check, policy: ToolPolicy | None = No
     """
     # Lazy import keeps the standalone package free of application dependencies.
     from app.retrieval.engine import HybridRetrievalEngine
+    from app.schemas.evidence import EducationalCategory
 
     engine = HybridRetrievalEngine(manifest_path=manifest_path)
-    return Orchestrator(safety_check=safety_check, retrieve=engine.retrieve, policy=policy)
+
+    def retrieve(query, **kwargs):
+        if "category" in kwargs:
+            kwargs["category"] = EducationalCategory(kwargs["category"])
+        return engine.retrieve(query, **kwargs)
+
+    return Orchestrator(safety_check=safety_check, retrieve=retrieve, policy=policy)
