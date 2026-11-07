@@ -15,6 +15,7 @@ from .cycle_history import analyze_cycle_history
 from .handoff import ContextSnapshot, EvidenceSnapshot, adapt_retrieval, adapt_session, validate_claim_references
 from .pubmed import search_pubmed
 from .answer_selection import FACETS, question_focus, select_passages
+from .conversation import conversational_reply
 
 
 @dataclass(frozen=True)
@@ -104,7 +105,7 @@ class Orchestrator:
             "what_it_is": "", "symptoms": [], "prevention_and_lifestyle": [],
             "answer": "", "claims": [], "questions": [], "next_steps": [],
             "limitations": [], "evidence": [], "protocol_id": None,
-            "system_version": "tools-orchestration-v0.3",
+            "system_version": "tools-orchestration-v0.3.1",
         }
 
         def finish(message, *, event, kind="abstention", disposition="unable_to_assess", question=False):
@@ -149,6 +150,12 @@ class Orchestrator:
             return finish("Session context could not be validated. Please retry without stored context.", event="CONTEXT_INVALID")
         if context.is_adult == "no" or (context.age is not None and context.age < 18):
             return finish("This workflow supports adult education only. Please consult an appropriate healthcare professional.", event="MINOR_SCOPE", kind="out_of_scope")
+
+        acknowledgement = conversational_reply(query)
+        if acknowledgement:
+            response["questions"] = [acknowledgement]
+            # Social acknowledgements do not consume medical clarification turns.
+            return finish(acknowledgement, event="CONVERSATION_ACKNOWLEDGED", kind="clarification", disposition="educational")
 
         def clarify(message):
             if context.clarification_turns_used >= 2:

@@ -19,6 +19,7 @@ from health_tools.pending_tasks import (
     PendingTaskStore, TaskTransition, advance_cycle_task, is_task_reply,
     new_cycle_task, request_input,
 )
+from health_tools.conversation import conversational_reply
 from health_tools.workflow import Orchestrator, SafetyDecision, ToolPolicy, WorkflowResult, select_intent
 
 
@@ -53,7 +54,7 @@ class HealthApplication:
             response_type="abstention" if unavailable else "clarification" if asking else "education",
             disposition="unable_to_assess" if unavailable else "educational",
             answer=transition.message, questions=[transition.message] if asking else [],
-            limitations=[], system_version="tools-orchestration-v0.3",
+            limitations=[], system_version="tools-orchestration-v0.3.1",
         ).model_dump(mode="json")
         # Task I/O has its own bounded turn count. It does not consume the two
         # medical-context clarification turns owned by ContextTracker.
@@ -79,6 +80,11 @@ class HealthApplication:
             if task.session_id != key or task.expires_at > session.expires_at or task.schema_version != "1.0":
                 self.pending_tasks.delete(key)
                 return self._task_response(TaskTransition("cancel", message="Pending inputs could not be validated. Start a new calculation.", event="TASK_STATE_INVALID")), query, tool_inputs, ()
+            acknowledgement = conversational_reply(query)
+            if acknowledgement:
+                return self._task_response(TaskTransition(
+                    "ask", message=acknowledgement + " Your pending calculation is unchanged; you can continue or type /cancel.",
+                    event="TASK_CONVERSATION_ACKNOWLEDGED")), query, tool_inputs, ()
             transition = advance_cycle_task(task, query, now=now)
             if transition.action == "ask":
                 self.pending_tasks.save(transition.task, now=now)

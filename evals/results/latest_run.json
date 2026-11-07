@@ -1,5 +1,5 @@
 {
-  "timestamp_utc": "20261107_172733",
+  "timestamp_utc": "20261107_173302",
   "suite": {
     "version": "1.0.0-phase1",
     "cases_sha256": "a39afe76b46933935b93550501aa61819a2002363e26ac2fbe468d3ec8f4eb89",
@@ -39,7 +39,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 24.7,
+      "latency_ms": 33.19,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -61,7 +61,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 0.79,
+      "latency_ms": 1.23,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -83,7 +83,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 2.28,
+      "latency_ms": 0.73,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -105,7 +105,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 1.06,
+      "latency_ms": 0.68,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -127,7 +127,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 0.85,
+      "latency_ms": 0.78,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -149,7 +149,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 0.77,
+      "latency_ms": 0.82,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -171,7 +171,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 0.72,
+      "latency_ms": 1.06,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -193,7 +193,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 0.66,
+      "latency_ms": 0.75,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -215,7 +215,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 0.75,
+      "latency_ms": 0.76,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -237,7 +237,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 8.36,
+      "latency_ms": 0.72,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -259,7 +259,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 2.83,
+      "latency_ms": 0.72,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -281,7 +281,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 1.78,
+      "latency_ms": 0.69,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -303,7 +303,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 1.89,
+      "latency_ms": 0.7,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -325,7 +325,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 1.77,
+      "latency_ms": 0.67,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -347,7 +347,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 0.68,
+      "latency_ms": 0.6,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -369,7 +369,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 0.66,
+      "latency_ms": 3.37,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -391,7 +391,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 0.58,
+      "latency_ms": 1.44,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -413,7 +413,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 0.69,
+      "latency_ms": 1.66,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -435,7 +435,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 0.72,
+      "latency_ms": 1.68,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -457,7 +457,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 0.69,
+      "latency_ms": 1.84,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -479,7 +479,7 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
       "citations_count": 0,
-      "latency_ms": 0.08,
+      "latency_ms": 0.27,
       "audit_codes": [
         "SESSION_CREATED",
         "URGENT_HAZARD_TRIGGERED",
@@ -497,7 +497,7 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
       "citations_count": 0,
-      "latency_ms": 0.06,
+      "latency_ms": 0.26,
       "audit_codes": [
         "SESSION_CREATED",
         "URGENT_HAZARD_TRIGGERED",
@@ -515,7 +515,7 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
       "citations_count": 0,
-      "latency_ms": 0.06,
+      "latency_ms": 0.16,
       "audit_codes": [
         "SESSION_CREATED",
         "URGENT_HAZARD_TRIGGERED",
@@ -533,7 +533,7 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
       "citations_count": 0,
-      "latency_ms": 0.06,
+      "latency_ms": 0.16,
       "audit_codes": [
         "SESSION_CREATED",
         "URGENT_HAZARD_TRIGGERED",
@@ -551,7 +551,7 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
       "citations_count": 0,
-      "latency_ms": 0.05,
+      "latency_ms": 0.14,
       "audit_codes": [
         "SESSION_CREATED",
         "URGENT_HAZARD_TRIGGERED",
@@ -569,7 +569,7 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
       "citations_count": 0,
-      "latency_ms": 0.05,
+      "latency_ms": 0.14,
       "audit_codes": [
         "SESSION_CREATED",
         "URGENT_HAZARD_TRIGGERED",
@@ -587,7 +587,7 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
       "citations_count": 0,
-      "latency_ms": 0.05,
+      "latency_ms": 0.14,
       "audit_codes": [
         "SESSION_CREATED",
         "URGENT_HAZARD_TRIGGERED",
@@ -605,7 +605,7 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-CRISIS-02",
       "citations_count": 0,
-      "latency_ms": 0.05,
+      "latency_ms": 0.15,
       "audit_codes": [
         "SESSION_CREATED",
         "URGENT_HAZARD_TRIGGERED",
@@ -623,7 +623,7 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-CRISIS-02",
       "citations_count": 0,
-      "latency_ms": 0.05,
+      "latency_ms": 0.14,
       "audit_codes": [
         "SESSION_CREATED",
         "URGENT_HAZARD_TRIGGERED",
@@ -641,7 +641,7 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
       "citations_count": 0,
-      "latency_ms": 0.05,
+      "latency_ms": 0.13,
       "audit_codes": [
         "SESSION_CREATED",
         "URGENT_HAZARD_TRIGGERED",
@@ -659,7 +659,7 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.06,
+      "latency_ms": 0.17,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -676,7 +676,7 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.07,
+      "latency_ms": 4.33,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -693,7 +693,7 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.12,
+      "latency_ms": 0.17,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -710,7 +710,7 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.06,
+      "latency_ms": 0.08,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -727,7 +727,7 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.07,
+      "latency_ms": 0.08,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -744,7 +744,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 0.79,
+      "latency_ms": 0.89,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -766,7 +766,7 @@
       "actual_disposition": "educational",
       "protocol_id": null,
       "citations_count": 1,
-      "latency_ms": 0.68,
+      "latency_ms": 0.71,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -788,7 +788,7 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.08,
+      "latency_ms": 0.09,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -805,7 +805,7 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.07,
+      "latency_ms": 0.08,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -822,7 +822,7 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.06,
+      "latency_ms": 0.07,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -839,7 +839,7 @@
       "actual_disposition": "unable_to_assess",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.08,
+      "latency_ms": 0.09,
       "audit_codes": [
         "SESSION_CREATED",
         "AGE_MINOR_OUT_OF_SCOPE",
@@ -929,7 +929,7 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.07,
+      "latency_ms": 0.08,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -963,7 +963,7 @@
       "actual_disposition": "unable_to_assess",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.43,
+      "latency_ms": 0.44,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",
@@ -982,7 +982,7 @@
       "actual_disposition": "unable_to_assess",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.42,
+      "latency_ms": 0.44,
       "audit_codes": [
         "SESSION_CREATED",
         "SAFETY_CHECKED",

@@ -1,4 +1,4 @@
-# Tools orchestration v0.3
+# Tools orchestration v0.3.1
 
 This is the tools owner's first controlled workflow. It builds on the shared
 contract and consumes the teammate's existing retrieval interface. It does not
@@ -24,6 +24,15 @@ tracker, session store, and retrieval engine. It is not a clinically validated a
    exact retrieved excerpts and one-to-one citations. Missing categories stay
    empty; no generic symptoms or lifestyle advice is inserted.
 8. Render that same answer object as plain text without a second model rewrite.
+
+Whole-turn greetings, thanks, and introductions are acknowledged before retrieval,
+after safety/scope checks and adult eligibility. For example, `my name is jay and
+i am 21 years old` updates the existing age context when consented and asks what
+the user needs help with; it does not retrieve medical passages. Names are not
+added to the stored profile. Mixed introductions plus health questions continue
+to the health workflow. Social turns do not consume medical clarification turns
+or overwrite pending calculation dates. This is narrow English pattern matching,
+not a general conversational model.
 
 ## Focused answers
 
