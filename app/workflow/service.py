@@ -4,6 +4,7 @@ The current upstream safety rules and evidence manifest are a development
 baseline, not independently clinically validated policies or source approvals.
 """
 
+from dataclasses import replace
 from datetime import datetime, timezone
 
 from app.retrieval.exceptions import ScopeViolationError, UrgentEscalationRequired
@@ -17,12 +18,44 @@ from health_tools.workflow import Orchestrator, SafetyDecision, ToolPolicy, Work
 
 
 class HealthApplication:
-    def __init__(self, *, store=None, retrieve=None, pubmed_search=None, policy=None):
+    def __init__(self, *, store=None, retrieve=None, pubmed_search=None, policy=None, claim_verifier=None):
         self.store = store if store is not None else EphemeralSessionStore()
         self.policy = policy or ToolPolicy()
         self._retrieve_callback = retrieve
         self._engine = None
         self._pubmed_search = pubmed_search
+        self._claim_verifier = claim_verifier
+
+    def _verify_answer(self, result, bundles):
+        """Gate the exact final answer; never repair only a hidden claims list."""
+        from app.verification.verifier import ClaimVerifier, VerificationDecision
+
+        if "EVIDENCE_COMPLETE" not in result.events:
+            return result
+        try:
+            candidate = EducationalResponse.model_validate(result.response)
+            if not candidate.claims or not candidate.evidence or len(bundles) != 1:
+                raise ValueError("Missing verification inputs")
+            if self._claim_verifier is None:
+                self._claim_verifier = ClaimVerifier()
+            report = self._claim_verifier.verify(candidate, bundles[0].scored_passages)
+            # The upstream verifier is lexical/rule based, not a clinical proof.
+            # Every displayed claim must pass; a partial repair is insufficient.
+            if (report.decision == VerificationDecision.ACCEPT
+                    and report.total_claims == len(candidate.claims)
+                    and report.supported_claims_count == len(candidate.claims)
+                    and report.unsupported_claims_count == 0):
+                return replace(result, events=result.events + ("CLAIM_VERIFICATION_PASSED_100",))
+            event = "CLAIM_VERIFICATION_FALLBACK"
+        except Exception:
+            event = "CLAIM_VERIFICATION_UNAVAILABLE"
+        fallback = EducationalResponse(
+            request_id=result.response["request_id"], topic=result.response["topic"],
+            response_type="abstention", disposition="unable_to_assess",
+            answer="I could not verify the retrieved answer, so I cannot provide an evidence-based response for this request.",
+            system_version=result.response["system_version"],
+        ).model_dump(mode="json")
+        return replace(result, response=fallback, events=result.events + (event,))
 
     def _retrieve(self, query, **kwargs):
         if self._retrieve_callback is not None:
@@ -77,11 +110,22 @@ class HealthApplication:
             except Exception:
                 decision = SafetyDecision("unable_to_assess", "The safety check is unavailable. Please contact a qualified healthcare professional for health concerns.")
 
+        bundles = []
+
+        def retrieve_turn(*args, **kwargs):
+            bundle = self._retrieve(*args, **kwargs)
+            bundles.append(bundle)
+            return bundle
+
         dependencies = dict(safety_check=lambda message, context: decision,
-                            retrieve=self._retrieve, policy=self.policy)
+                            retrieve=retrieve_turn, policy=self.policy)
         if self._pubmed_search is not None:
             dependencies["pubmed_search"] = self._pubmed_search
         result = Orchestrator(**dependencies).run(query, session=turn, now=current, **tool_inputs)
+        if decision.action == "out_of_scope":
+            # Preserve the upstream medication/policy boundary care disposition.
+            result.response["disposition"] = "routine_review"
+        result = self._verify_answer(result, bundles)
         result.response["limitations"].append(
             "Development build: source-review metadata and safety rules have not been independently verified."
         )

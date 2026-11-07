@@ -78,6 +78,30 @@ any tool. This is software integration, not clinical validation of those checks.
 Source review metadata is not independently verified; development status remains
 visible in responses. Local answers use exact excerpts, not generated summaries.
 
+The latest `main` changes (through `9075800`) are integrated on `tools`: expanded
+evidence, updated scope rules, development evaluations, and ClaimVerifier.
+`HealthApplication` runs the verifier before returning an evidence answer. All
+displayed claims must pass; partial repairs and failures replace the entire answer
+with an abstention, clearing claims, citations, and medical text fields. Verifier
+outages also stop the evidence answer. Calculations, bibliographies, and urgent
+messages do not depend on a research-claim verifier.
+
+ClaimVerifier uses token overlap and rules. It is not a general semantic
+entailment model or clinical proof. Exact excerpt construction and citation
+identity checks remain in place; source applicability still needs review.
+
+Run the provided development scenarios separately from unit tests:
+
+```bash
+python3 -m evals.run_evals
+```
+
+The runner now rejects the disabled `--llm` mode, exits nonzero on failed checks,
+does not count missing scenario families as passes, and records the case-file
+hash and actual mode in results. These 50 cases check expected routing and
+citation shape, not medical correctness. Labels and clinical review claims have
+not been independently verified. Passing them is not release approval.
+
 The legacy `process_health_query` function still returns
 `(EducationalResponse, SessionMemory)`. Its old LLM and external-fallback flags are
 accepted for call compatibility but do not enable those paths. Programmatic callers

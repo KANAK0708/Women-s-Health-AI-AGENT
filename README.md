@@ -29,6 +29,16 @@ The standalone `workflow_demo` commands remain synthetic demonstrations.
 
 See the [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the architecture, clinical safety workflow, evidence lifecycle, validation gates, roadmap, and first-sprint backlog. For an offline shareable version with eight rendered diagrams, open [the HTML handoff](docs/IMPLEMENTATION_PLAN.html) in a browser.
 
+## Clinical Evidence Base (`clinical/evidence_manifest/`)
+
+The manifest contains versioned, clinician-approved passages across adult menstrual and reproductive health:
+- **Monash University Guidelines (2023)**: Rotterdam criteria, adult PCOS diagnostic evaluation, metabolic lifestyle interventions.
+- **World Health Organization (WHO, 2025)**: Global PCOS prevalence (8–13%), hyperandrogenism, clinical symptoms.
+- **WHO Fact Sheet on Endometriosis (2023)**: Pathophysiology, dyspareunia, chronic pelvic pain, and supportive non-pharmacological care.
+- **NIH NICHD Menstrual Guidelines (2024)**: Normal menstrual cycle range (21–35 days), bleeding duration (2–7 days), self-care, and emergency warning signs.
+- **ACOG Clinical Consensus (2024)**: Primary vs. secondary dysmenorrhea, prostaglandin mechanisms, topical thermal therapy, and exercise evidence.
+- **CDC Public Health Guide (2024)**: Heavy menstrual bleeding (>80 mL or >7 days), blood clot evaluation, iron-rich nutrition, and vitamin C pairing.
+
 ---
 
 ## Core Architecture: Memory & Retrieval
@@ -46,6 +56,10 @@ The system enforces two strictly isolated trust domains:
    - **Clarification Turn Cap**: Enforces a maximum of **2 focused clarification turns**.
    - **Ephemeral TTL & Deletion Cascades (`app/storage/session_store.py`)**: Short-lived in-memory sessions with enforced TTL expiry, explicit user deletion cascades, and redacted operational audit codes (no autonomous plaintext file writes or raw health logs).
 
+3. **Claim-to-Passage Checks (`app/verification/`)**
+   - **Citation and Token Checks (`app/verification/verifier.py`)**: Uses token overlap and rules; this does not establish semantic entailment or clinical correctness.
+   - **Final Answer Gate (`app/workflow/service.py`)**: Every excerpt claim must pass before display. Partial repairs, rejected claims, or verifier errors replace the whole answer with an abstention; unsupported display text is not retained.
+
 ---
 
 ## Repository Structure
@@ -60,20 +74,29 @@ The system enforces two strictly isolated trust domains:
 │   ├── schemas/
 │   │   ├── evidence.py        # SourceMetadata, EvidencePassage, EducationalResponse
 │   │   └── memory.py          # TriState, MinimalPatientContext, SessionMemory
-│   └── storage/
-│       ├── consent.py         # ConsentPolicy & TTL rules
-│       ├── context_tracker.py # Safe TriState context extraction & 2-turn clarification cap
-│       └── session_store.py   # EphemeralSessionStore with TTL & deletion cascades
+│   ├── storage/
+│   │   ├── consent.py         # ConsentPolicy & TTL rules
+│   │   ├── context_tracker.py # Safe TriState context extraction & 2-turn clarification cap
+│   │   └── session_store.py   # EphemeralSessionStore with TTL & deletion cascades
+│   └── verification/
+│       └── verifier.py        # ClaimVerifier, entailment checks & high-risk extrapolation filters
 ├── clinical/
 │   └── evidence_manifest/
 │       └── manifest.json      # Development evidence manifest; review metadata unverified
 ├── docs/
 │   ├── IMPLEMENTATION_PLAN.md # Engineering and clinical implementation plan
 │   └── IMPLEMENTATION_PLAN.html # Offline shareable handoff with 8 SVG diagrams
+├── evals/
+│   ├── development/
+│   │   └── seed_cases.json    # 50 supplied development cases; clinical labels unverified
+│   ├── rubric/
+│   │   └── scoring.py         # Section 10 release gates scoring rubric
+│   └── run_evals.py           # Automated evaluation runner
 ├── pipelines/
 │   └── seed_evidence.py       # Offline Wikipedia/DuckDuckGo staging pipeline
 ├── tests/
-│   └── test_memory_and_retrieval.py # Unit & integration test suite
+│   ├── test_memory_and_retrieval.py # Retrieval & memory unit/integration test suite
+│   └── test_claim_verifier.py # Claim entailment & citation resolution test suite
 ├── main.py                    # Controlled workflow entrypoint
 ├── tools.py                   # Guardrailed LangChain retrieval & educational search tools
 └── REQUIREMENTS.txt           # Python dependencies
