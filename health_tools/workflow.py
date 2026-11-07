@@ -104,7 +104,7 @@ class Orchestrator:
             "what_it_is": "", "symptoms": [], "prevention_and_lifestyle": [],
             "answer": "", "claims": [], "questions": [], "next_steps": [],
             "limitations": [], "evidence": [], "protocol_id": None,
-            "system_version": "tools-orchestration-v0.2",
+            "system_version": "tools-orchestration-v0.3",
         }
 
         def finish(message, *, event, kind="abstention", disposition="unable_to_assess", question=False):

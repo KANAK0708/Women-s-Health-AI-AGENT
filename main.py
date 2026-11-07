@@ -56,7 +56,7 @@ def main():
     session_id = None
     interactive = args.query is None
     if interactive:
-        print("PCOS and period-health assistant. /quit to exit; /forget to delete session context.")
+        print("PCOS and period-health assistant. /quit to exit; /forget to delete session context; /cancel to cancel a pending calculation.")
         print("Session context retention: " + ("on" if args.remember else "off"))
     try:
         while True:
@@ -74,6 +74,10 @@ def main():
                 continue
             result, session = application.process(query, session_id=session_id, **options)
             session_id = session.session_id
+            if interactive:
+                # Command-line task inputs belong to the first turn only.
+                options["period_start_dates"] = None
+                options["as_of"] = None
             if args.json:
                 print(json.dumps(result.response, indent=2))
             else:

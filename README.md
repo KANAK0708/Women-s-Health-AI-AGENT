@@ -18,7 +18,11 @@ python3 main.py --remember
 python3 -m unittest discover -s tests -v
 ```
 
-In interactive mode use `/quit` to exit or `/forget` to delete the active session.
+In interactive mode use `/quit` to exit, `/forget` to delete the active session,
+or `/cancel` to clear a pending cycle calculation. With `--remember`, ask to
+calculate cycle intervals, send ISO start dates and a reference date over replies,
+then confirm the proposed inputs before calculation. See
+[the pending-task contract](docs/PENDING_TASK_CONTRACT.md).
 Use `--json` for the structured response. External research sends only the
 separately provided research query to NCBI; exclude personal details.
 See [the orchestration guide](docs/ORCHESTRATION.md) and

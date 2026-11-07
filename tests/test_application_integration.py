@@ -60,7 +60,7 @@ class ApplicationIntegrationTests(unittest.TestCase):
         app = HealthApplication()
         session_id = None
         for expected in ("clarification", "clarification", "abstention"):
-            result, session = app.process("Calculate cycle intervals", session_id=session_id,
+            result, session = app.process("What about exercise?", session_id=session_id,
                                           allow_session_context=True)
             session_id = session.session_id
             self.assertEqual(result.response["response_type"], expected)

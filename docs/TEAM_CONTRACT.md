@@ -54,10 +54,12 @@ the session expires. Session identifiers, audit history, and storage timestamps
 are not exposed in the snapshot. No memory is mutated. The current user message
 is a separate input and must still be checked even if historical context is absent.
 
-The existing memory schema has no confirmed period dates. For now cycle tools
-accept separately supplied, user-confirmed dates. Do not infer dates or add memory
-fields without coordinating with the memory owner. The existing fields also do
-not encode per-fact provenance; that remains an integration limitation.
+The existing memory schema has no confirmed period dates. Cycle tools accept
+explicit caller-confirmed dates, or dates proposed and confirmed through the
+separate pending-task controller. The storage protocol and development adapter
+are described in [PENDING_TASK_CONTRACT.md](PENDING_TASK_CONTRACT.md). No profile
+fields were added. Coordinate a shared adapter with the memory owner. The existing
+profile fields also do not encode per-fact provenance; that remains a limitation.
 
 ## Input 2: retrieved evidence
 

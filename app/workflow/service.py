@@ -14,17 +14,97 @@ from app.schemas.memory import MinimalPatientContext
 from app.storage.consent import ConsentPolicy
 from app.storage.context_tracker import ContextTracker
 from app.storage.session_store import EphemeralSessionStore
-from health_tools.workflow import Orchestrator, SafetyDecision, ToolPolicy, WorkflowResult
+from app.workflow.task_store import InMemoryPendingTaskStore
+from health_tools.pending_tasks import (
+    PendingTaskStore, TaskTransition, advance_cycle_task, is_task_reply,
+    new_cycle_task, request_input,
+)
+from health_tools.workflow import Orchestrator, SafetyDecision, ToolPolicy, WorkflowResult, select_intent
 
 
 class HealthApplication:
-    def __init__(self, *, store=None, retrieve=None, pubmed_search=None, policy=None, claim_verifier=None):
+    def __init__(self, *, store=None, retrieve=None, pubmed_search=None, policy=None, claim_verifier=None,
+                 pending_task_store: PendingTaskStore | None = None):
         self.store = store if store is not None else EphemeralSessionStore()
         self.policy = policy or ToolPolicy()
         self._retrieve_callback = retrieve
         self._engine = None
         self._pubmed_search = pubmed_search
         self._claim_verifier = claim_verifier
+        self.pending_tasks = pending_task_store if pending_task_store is not None else InMemoryPendingTaskStore()
+        self._pending_store_failed = False
+
+    def _drop_pending(self, session_id):
+        try:
+            self.pending_tasks.delete(session_id)
+            return True
+        except Exception:
+            # Do not allow a later confirmation to reuse state after an outage.
+            self._pending_store_failed = True
+            return False
+
+    @staticmethod
+    def _task_response(transition):
+        from uuid import uuid4
+        asking = transition.action == "ask"
+        unavailable = transition.action == "unavailable"
+        response = EducationalResponse(
+            request_id=f"req-{uuid4().hex[:10]}", topic="Cycle calculation inputs",
+            response_type="abstention" if unavailable else "clarification" if asking else "education",
+            disposition="unable_to_assess" if unavailable else "educational",
+            answer=transition.message, questions=[transition.message] if asking else [],
+            limitations=[], system_version="tools-orchestration-v0.3",
+        ).model_dump(mode="json")
+        # Task I/O has its own bounded turn count. It does not consume the two
+        # medical-context clarification turns owned by ContextTracker.
+        return WorkflowResult(response, ("SAFETY_CHECKED", transition.event))
+
+    def _pending_step(self, query, session, turn, decision, tool_inputs, *, now):
+        """Return an optional response and possibly confirmed tool inputs."""
+        key = session.session_id
+        if (decision.action != "proceed"
+                or turn.context.is_adult == "no"
+                or (turn.context.age is not None and turn.context.age < 18)):
+            self.pending_tasks.delete(key)
+            return None, query, tool_inputs, ()
+        self.pending_tasks.purge_expired(now=now)
+        if not session.allow_session_context:
+            self.pending_tasks.delete(key)
+            if is_task_reply(query):
+                return self._task_response(TaskTransition("cancel", message="Session context is off; there are no pending dates to confirm. Enable session context for follow-up inputs, or supply confirmed dates and a reference date together.", event="NO_PENDING_TASK")), query, tool_inputs, ()
+            return None, query, tool_inputs, ()
+        task = self.pending_tasks.get(key, now=now)
+        events = ()
+        if task is not None:
+            if task.session_id != key or task.expires_at > session.expires_at or task.schema_version != "1.0":
+                self.pending_tasks.delete(key)
+                return self._task_response(TaskTransition("cancel", message="Pending inputs could not be validated. Start a new calculation.", event="TASK_STATE_INVALID")), query, tool_inputs, ()
+            transition = advance_cycle_task(task, query, now=now)
+            if transition.action == "ask":
+                self.pending_tasks.save(transition.task, now=now)
+                return self._task_response(transition), query, tool_inputs, ()
+            self.pending_tasks.delete(key)
+            if transition.action == "execute":
+                inputs = {**tool_inputs, "period_start_dates": list(transition.task.period_start_dates), "as_of": transition.task.as_of}
+                return None, "Calculate cycle intervals", inputs, (transition.event,)
+            if transition.action == "cancel":
+                return self._task_response(transition), query, tool_inputs, ()
+            events = (transition.event,)
+
+        if select_intent(query) == "cycle_history" and "cycle_history" in self.policy.enabled and (
+            tool_inputs.get("period_start_dates") is None or tool_inputs.get("as_of") is None
+        ):
+            # Explicit API inputs are already caller-confirmed. Conversation
+            # extraction is always proposed and confirmed before calculation.
+            task = new_cycle_task(key, session.expires_at, now=now,
+                                  dates=tool_inputs.get("period_start_dates") or (), as_of=tool_inputs.get("as_of"))
+            transition = request_input(task)
+            self.pending_tasks.save(transition.task, now=now)
+            result = self._task_response(transition)
+            return replace(result, events=events + result.events), query, tool_inputs, ()
+        if is_task_reply(query):
+            return self._task_response(TaskTransition("cancel", message="There is no pending cycle calculation. Start a new calculation before sending dates or confirmation.", event="NO_PENDING_TASK")), query, tool_inputs, ()
+        return None, query, tool_inputs, events
 
     def _verify_answer(self, result, bundles):
         """Gate the exact final answer; never repair only a hidden claims list."""
@@ -84,6 +164,8 @@ class HealthApplication:
         current = now or datetime.now(timezone.utc)
         session = self.store.get_session(session_id, now=current) if session_id else None
         if session is None:
+            if session_id:
+                self._drop_pending(session_id)
             policy = None if allow_session_context is None else ConsentPolicy(
                 allow_minimal_session_context=allow_session_context)
             session = self.store.create_session(policy=policy, now=current)
@@ -91,6 +173,7 @@ class HealthApplication:
             session.allow_session_context = allow_session_context
             if not allow_session_context:
                 session.context = MinimalPatientContext()
+                self._drop_pending(session.session_id)
 
         # Retention consent applies to saved history, not comprehension of the
         # current message. Never flip the actual stored consent flag to process it.
@@ -123,7 +206,32 @@ class HealthApplication:
                             retrieve=retrieve_turn, policy=self.policy)
         if self._pubmed_search is not None:
             dependencies["pubmed_search"] = self._pubmed_search
-        result = Orchestrator(**dependencies).run(query, session=turn, now=current, **tool_inputs)
+        pending_result = None
+        routed_query, routed_inputs, task_events = query, tool_inputs, ()
+        if isinstance(query, str) and query.strip() and len(query) <= 4000:
+            try:
+                if self._pending_store_failed:
+                    raise RuntimeError("Pending task flow disabled after storage failure")
+                pending_result, routed_query, routed_inputs, task_events = self._pending_step(
+                    query, session, turn, decision, tool_inputs, now=current)
+            except Exception:
+                self._pending_store_failed = True
+                # A pending-store outage must never replace an urgent/scope
+                # response or permit confirmation of potentially stale inputs.
+                if decision.action == "proceed" and turn.context.is_adult != "no":
+                    pending_result = self._task_response(TaskTransition(
+                        "unavailable", message="Pending calculation storage is unavailable. No pending inputs were used; please retry in a new session.",
+                        event="TASK_STORAGE_UNAVAILABLE"))
+        else:
+            self._drop_pending(session.session_id)
+        result = pending_result or Orchestrator(**dependencies).run(
+            routed_query, session=turn, now=current, **routed_inputs)
+        if task_events:
+            result = replace(result, events=task_events + result.events)
+        if (not session.allow_session_context and isinstance(query, str) and select_intent(query) == "cycle_history"
+                and result.clarification_requested):
+            note = "Enable session context for a multi-turn calculation, or supply confirmed start dates and a reference date together."
+            result.response["answer"] += "\n\n" + note
         if decision.action == "out_of_scope":
             # Preserve the upstream medication/policy boundary care disposition.
             result.response["disposition"] = "routine_review"
@@ -140,8 +248,16 @@ class HealthApplication:
         if "EVIDENCE_COMPLETE" in result.events:
             session.audit_codes.append("RETRIEVAL_SUCCESS")
         session.context = turn.context if session.allow_session_context else MinimalPatientContext()
-        self.store.save_session(session, now=current)
+        try:
+            self.store.save_session(session, now=current)
+        except Exception:
+            self._drop_pending(session.session_id)
+            raise
         return result, session
 
     def forget(self, session_id: str) -> bool:
-        return self.store.delete_session(session_id)
+        pending_deleted = self._drop_pending(session_id)
+        deleted = self.store.delete_session(session_id)
+        if not pending_deleted:
+            raise RuntimeError("Session context was deleted, but pending-task deletion could not be confirmed.")
+        return deleted

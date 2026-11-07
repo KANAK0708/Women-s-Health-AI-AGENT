@@ -1,4 +1,4 @@
-# Tools orchestration v0.2
+# Tools orchestration v0.3
 
 This is the tools owner's first controlled workflow. It builds on the shared
 contract and consumes the teammate's existing retrieval interface. It does not
@@ -99,8 +99,11 @@ python3 main.py --remember
 
 The CLI keeps session context only with `--remember`; `/forget` deletes it and
 `/quit` exits. Session state is also deleted on CLI exit. `--json` prints the same
-typed response as JSON. Cycle inputs and research terms are explicit CLI options;
-natural-language dates and pending tool inputs are not remembered automatically.
+typed response as JSON. With retention enabled, cycle inputs can now be collected
+over replies and require explicit confirmation before calculation. `/cancel`
+clears that pending task. Only ISO date lists are parsed, not arbitrary narratives.
+See [PENDING_TASK_CONTRACT.md](PENDING_TASK_CONTRACT.md) for conversation examples,
+expiry/consent behavior, and the interface for a shared storage adapter.
 
 Current-turn context is processed in a deep copy, so an explicitly stated minor
 age still applies when retention is off. Only consented context is copied back
@@ -187,8 +190,9 @@ application decision. Trace codes are not a substitute for incident monitoring.
   synchronous. Add whole-request deadlines/cancellation at the application boundary.
 - The routing is one-tool-per-turn today. The call budget prevents future
   expansion from becoming unbounded; it does not implement multi-tool planning.
-- Multiturn follow-up choices rely on the caller supplying the clarified inputs;
-  no automatic natural-language date extraction or session writes occur.
+- Cycle-input follow-ups use a separate, bounded pending-task controller; the
+  initial adapter is process-local. Shared storage, atomic distributed consumption,
+  and natural-language date interpretation remain outside this increment.
 - The separate `guidelines.py` prototype stays local/deferred. There is one
   intended production retrieval owner: `app/retrieval`.
 
