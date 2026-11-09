@@ -14,6 +14,10 @@ from health_tools.workflow import render_response
 application = HealthApplication()
 # Preserve these names for existing callers using the teammate's session store.
 session_store = application.store
+retrieval_engine = getattr(application, "_engine", None)
+if retrieval_engine is None:
+    from app.retrieval.pg_vector_engine import get_retrieval_engine
+    retrieval_engine = get_retrieval_engine()
 
 
 def process_health_query(

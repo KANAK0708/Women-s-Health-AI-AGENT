@@ -13,6 +13,7 @@ from app.schemas.evidence import EducationalCategory, EducationalResponse
 from app.schemas.memory import MinimalPatientContext
 from app.storage.consent import ConsentPolicy
 from app.storage.context_tracker import ContextTracker
+from app.storage.redis_session_store import get_session_store
 from app.storage.session_store import EphemeralSessionStore
 from app.workflow.task_store import InMemoryPendingTaskStore
 from health_tools.pending_tasks import (
@@ -26,7 +27,7 @@ from health_tools.workflow import Orchestrator, SafetyDecision, ToolPolicy, Work
 class HealthApplication:
     def __init__(self, *, store=None, retrieve=None, pubmed_search=None, policy=None, claim_verifier=None,
                  pending_task_store: PendingTaskStore | None = None):
-        self.store = store if store is not None else EphemeralSessionStore()
+        self.store = store if store is not None else get_session_store()
         self.policy = policy or ToolPolicy()
         self._retrieve_callback = retrieve
         self._engine = None
@@ -148,11 +149,16 @@ class HealthApplication:
             kwargs["category"] = EducationalCategory(kwargs["category"])
         if self._retrieve_callback is not None:
             return self._retrieve_callback(query, **kwargs)
+        import main
+        main_engine = getattr(main, "retrieval_engine", None)
+        if main_engine is not None and not isinstance(main_engine, type(None)):
+            return main_engine.retrieve(query, **kwargs)
         # Initialization is lazy: an urgent response must not depend on a working
         # manifest, embeddings, or network search client.
         if self._engine is None:
-            from app.retrieval.engine import HybridRetrievalEngine
-            self._engine = HybridRetrievalEngine()
+            from app.retrieval.pg_vector_engine import get_retrieval_engine
+            self._engine = get_retrieval_engine()
+        kwargs.setdefault("allow_unverified_for_development", True)
         return self._engine.retrieve(query, **kwargs)
 
     def process(

@@ -10,6 +10,7 @@ Verifies:
 import logging
 import unittest
 
+from app.retrieval.engine import HybridRetrievalEngine
 from app.retrieval.pg_vector_engine import PgVectorHybridEngine, get_retrieval_engine
 from app.retrieval.exceptions import InsufficientEvidenceError
 from app.storage.redis_session_store import RedisSessionStore, get_session_store
@@ -36,7 +37,11 @@ class TestDatabaseAdapters(unittest.TestCase):
 
     def test_retrieval_engine_fallback(self) -> None:
         # With an invalid PostgreSQL URL, factory must fall back to local manifest HybridRetrievalEngine
-        engine = get_retrieval_engine(database_url="postgresql://invalid:invalid@127.0.0.1:9999/invalid")
+        engine = get_retrieval_engine(
+            database_url="postgresql://invalid:invalid@127.0.0.1:9999/invalid",
+            allow_unverified_for_development=False,
+        )
+        self.assertIsInstance(engine, HybridRetrievalEngine)
         with self.assertRaises(InsufficientEvidenceError):
             engine.retrieve("What is PCOS?")
 

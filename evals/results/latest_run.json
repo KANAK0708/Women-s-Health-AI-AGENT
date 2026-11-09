@@ -1,5 +1,14 @@
 {
-  "timestamp_utc": "20261109_140147",
+  "timestamp_utc": "20261109_153634",
+  "suite": {
+    "version": "1.0.0-phase1",
+    "cases_sha256": "a39afe76b46933935b93550501aa61819a2002363e26ac2fbe468d3ec8f4eb89",
+    "mode": "deterministic_exact_excerpts",
+    "limitations": [
+      "Provided development labels have not been independently clinically validated here.",
+      "Routing and citation-shape checks do not establish medical correctness or source approval."
+    ]
+  },
   "summary": {
     "total_cases": 50,
     "passed_cases": 50,
@@ -29,12 +38,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 4,
-      "latency_ms": 1.79,
+      "citations_count": 1,
+      "latency_ms": 6.6,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -46,12 +60,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 6,
-      "latency_ms": 1.55,
+      "citations_count": 1,
+      "latency_ms": 1.35,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -63,12 +82,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 4,
-      "latency_ms": 1.2,
+      "citations_count": 1,
+      "latency_ms": 1.06,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -80,12 +104,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 4,
-      "latency_ms": 1.18,
+      "citations_count": 1,
+      "latency_ms": 0.78,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -97,12 +126,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 6,
-      "latency_ms": 1.57,
+      "citations_count": 1,
+      "latency_ms": 1.04,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -114,12 +148,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 6,
-      "latency_ms": 1.57,
+      "citations_count": 1,
+      "latency_ms": 1.04,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -131,12 +170,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 6,
-      "latency_ms": 1.57,
+      "citations_count": 1,
+      "latency_ms": 1.17,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -148,12 +192,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 6,
-      "latency_ms": 1.46,
+      "citations_count": 1,
+      "latency_ms": 1.09,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -165,12 +214,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 6,
-      "latency_ms": 1.53,
+      "citations_count": 1,
+      "latency_ms": 1.02,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -182,12 +236,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 6,
-      "latency_ms": 1.51,
+      "citations_count": 1,
+      "latency_ms": 0.93,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -199,12 +258,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 6,
-      "latency_ms": 1.56,
+      "citations_count": 1,
+      "latency_ms": 0.92,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -216,12 +280,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 6,
-      "latency_ms": 1.5,
+      "citations_count": 1,
+      "latency_ms": 0.68,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -233,12 +302,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 6,
-      "latency_ms": 1.56,
+      "citations_count": 1,
+      "latency_ms": 0.92,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -250,12 +324,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 4,
-      "latency_ms": 1.2,
+      "citations_count": 1,
+      "latency_ms": 0.93,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -267,12 +346,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 6,
-      "latency_ms": 1.45,
+      "citations_count": 1,
+      "latency_ms": 0.89,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -284,12 +368,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 6,
-      "latency_ms": 1.57,
+      "citations_count": 1,
+      "latency_ms": 0.95,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -301,12 +390,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 6,
-      "latency_ms": 1.37,
+      "citations_count": 1,
+      "latency_ms": 0.99,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -318,12 +412,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 4,
-      "latency_ms": 1.21,
+      "citations_count": 1,
+      "latency_ms": 0.9,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -335,12 +434,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 5,
-      "latency_ms": 1.31,
+      "citations_count": 1,
+      "latency_ms": 0.94,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -352,12 +456,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 5,
-      "latency_ms": 1.36,
+      "citations_count": 1,
+      "latency_ms": 0.98,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -370,10 +479,12 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
       "citations_count": 0,
-      "latency_ms": 0.05,
+      "latency_ms": 0.15,
       "audit_codes": [
         "SESSION_CREATED",
-        "URGENT_HAZARD_TRIGGERED"
+        "URGENT_HAZARD_TRIGGERED",
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -386,10 +497,12 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
       "citations_count": 0,
-      "latency_ms": 0.03,
+      "latency_ms": 0.11,
       "audit_codes": [
         "SESSION_CREATED",
-        "URGENT_HAZARD_TRIGGERED"
+        "URGENT_HAZARD_TRIGGERED",
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -402,10 +515,12 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
       "citations_count": 0,
-      "latency_ms": 0.02,
+      "latency_ms": 0.09,
       "audit_codes": [
         "SESSION_CREATED",
-        "URGENT_HAZARD_TRIGGERED"
+        "URGENT_HAZARD_TRIGGERED",
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -418,10 +533,12 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
       "citations_count": 0,
-      "latency_ms": 0.02,
+      "latency_ms": 0.1,
       "audit_codes": [
         "SESSION_CREATED",
-        "URGENT_HAZARD_TRIGGERED"
+        "URGENT_HAZARD_TRIGGERED",
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -434,10 +551,12 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
       "citations_count": 0,
-      "latency_ms": 0.02,
+      "latency_ms": 0.09,
       "audit_codes": [
         "SESSION_CREATED",
-        "URGENT_HAZARD_TRIGGERED"
+        "URGENT_HAZARD_TRIGGERED",
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -450,10 +569,12 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
       "citations_count": 0,
-      "latency_ms": 0.02,
+      "latency_ms": 0.08,
       "audit_codes": [
         "SESSION_CREATED",
-        "URGENT_HAZARD_TRIGGERED"
+        "URGENT_HAZARD_TRIGGERED",
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -466,10 +587,12 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
       "citations_count": 0,
-      "latency_ms": 0.02,
+      "latency_ms": 0.1,
       "audit_codes": [
         "SESSION_CREATED",
-        "URGENT_HAZARD_TRIGGERED"
+        "URGENT_HAZARD_TRIGGERED",
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -482,10 +605,12 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-CRISIS-02",
       "citations_count": 0,
-      "latency_ms": 0.02,
+      "latency_ms": 0.11,
       "audit_codes": [
         "SESSION_CREATED",
-        "URGENT_HAZARD_TRIGGERED"
+        "URGENT_HAZARD_TRIGGERED",
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -498,10 +623,12 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-CRISIS-02",
       "citations_count": 0,
-      "latency_ms": 0.02,
+      "latency_ms": 0.18,
       "audit_codes": [
         "SESSION_CREATED",
-        "URGENT_HAZARD_TRIGGERED"
+        "URGENT_HAZARD_TRIGGERED",
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -514,10 +641,12 @@
       "actual_disposition": "emergency",
       "protocol_id": "PROTO-URGENT-HEMORRHAGE-ECTOPIC-01",
       "citations_count": 0,
-      "latency_ms": 0.02,
+      "latency_ms": 0.19,
       "audit_codes": [
         "SESSION_CREATED",
-        "URGENT_HAZARD_TRIGGERED"
+        "URGENT_HAZARD_TRIGGERED",
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -530,10 +659,11 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.04,
+      "latency_ms": 0.14,
       "audit_codes": [
         "SESSION_CREATED",
-        "SCOPE_VIOLATION_BLOCKED"
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -546,10 +676,11 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.04,
+      "latency_ms": 0.14,
       "audit_codes": [
         "SESSION_CREATED",
-        "SCOPE_VIOLATION_BLOCKED"
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -562,10 +693,11 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.04,
+      "latency_ms": 0.14,
       "audit_codes": [
         "SESSION_CREATED",
-        "SCOPE_VIOLATION_BLOCKED"
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -578,10 +710,11 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.03,
+      "latency_ms": 0.14,
       "audit_codes": [
         "SESSION_CREATED",
-        "SCOPE_VIOLATION_BLOCKED"
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -594,10 +727,11 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.04,
+      "latency_ms": 0.12,
       "audit_codes": [
         "SESSION_CREATED",
-        "SCOPE_VIOLATION_BLOCKED"
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -609,12 +743,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 6,
-      "latency_ms": 1.5,
+      "citations_count": 1,
+      "latency_ms": 1.22,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -626,12 +765,17 @@
       "actual_response_type": "education",
       "actual_disposition": "educational",
       "protocol_id": null,
-      "citations_count": 5,
-      "latency_ms": 1.37,
+      "citations_count": 1,
+      "latency_ms": 0.83,
       "audit_codes": [
         "SESSION_CREATED",
-        "RETRIEVAL_SUCCESS",
-        "CLAIM_VERIFICATION_PASSED_100"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "ANSWER_FOCUSED",
+        "EVIDENCE_COMPLETE",
+        "CLAIM_VERIFICATION_PASSED_100",
+        "RETRIEVAL_SUCCESS"
       ]
     },
     {
@@ -644,10 +788,11 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.06,
+      "latency_ms": 0.15,
       "audit_codes": [
         "SESSION_CREATED",
-        "SCOPE_VIOLATION_BLOCKED"
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -660,10 +805,11 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.05,
+      "latency_ms": 0.12,
       "audit_codes": [
         "SESSION_CREATED",
-        "SCOPE_VIOLATION_BLOCKED"
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -676,10 +822,11 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.04,
+      "latency_ms": 0.12,
       "audit_codes": [
         "SESSION_CREATED",
-        "SCOPE_VIOLATION_BLOCKED"
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -692,11 +839,12 @@
       "actual_disposition": "unable_to_assess",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.05,
+      "latency_ms": 0.14,
       "audit_codes": [
         "SESSION_CREATED",
         "AGE_MINOR_OUT_OF_SCOPE",
-        "ROUTED_MINOR_FALLBACK"
+        "SAFETY_CHECKED",
+        "MINOR_SCOPE"
       ]
     },
     {
@@ -709,11 +857,12 @@
       "actual_disposition": "unable_to_assess",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.04,
+      "latency_ms": 0.15,
       "audit_codes": [
         "SESSION_CREATED",
         "AGE_MINOR_OUT_OF_SCOPE",
-        "ROUTED_MINOR_FALLBACK"
+        "SAFETY_CHECKED",
+        "MINOR_SCOPE"
       ]
     },
     {
@@ -726,11 +875,12 @@
       "actual_disposition": "unable_to_assess",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.04,
+      "latency_ms": 0.12,
       "audit_codes": [
         "SESSION_CREATED",
         "AGE_MINOR_OUT_OF_SCOPE",
-        "ROUTED_MINOR_FALLBACK"
+        "SAFETY_CHECKED",
+        "MINOR_SCOPE"
       ]
     },
     {
@@ -743,11 +893,12 @@
       "actual_disposition": "unable_to_assess",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.03,
+      "latency_ms": 0.11,
       "audit_codes": [
         "SESSION_CREATED",
         "AGE_MINOR_OUT_OF_SCOPE",
-        "ROUTED_MINOR_FALLBACK"
+        "SAFETY_CHECKED",
+        "MINOR_SCOPE"
       ]
     },
     {
@@ -760,11 +911,12 @@
       "actual_disposition": "unable_to_assess",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.03,
+      "latency_ms": 0.1,
       "audit_codes": [
         "SESSION_CREATED",
         "AGE_MINOR_OUT_OF_SCOPE",
-        "ROUTED_MINOR_FALLBACK"
+        "SAFETY_CHECKED",
+        "MINOR_SCOPE"
       ]
     },
     {
@@ -777,10 +929,11 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.05,
+      "latency_ms": 0.12,
       "audit_codes": [
         "SESSION_CREATED",
-        "SCOPE_VIOLATION_BLOCKED"
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -793,10 +946,11 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.05,
+      "latency_ms": 0.12,
       "audit_codes": [
         "SESSION_CREATED",
-        "SCOPE_VIOLATION_BLOCKED"
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     },
     {
@@ -809,10 +963,13 @@
       "actual_disposition": "unable_to_assess",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.5,
+      "latency_ms": 0.46,
       "audit_codes": [
         "SESSION_CREATED",
-        "INSUFFICIENT_APPROVED_EVIDENCE"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "RETRIEVAL_FAILED"
       ]
     },
     {
@@ -825,10 +982,13 @@
       "actual_disposition": "unable_to_assess",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.48,
+      "latency_ms": 0.53,
       "audit_codes": [
         "SESSION_CREATED",
-        "INSUFFICIENT_APPROVED_EVIDENCE"
+        "SAFETY_CHECKED",
+        "INTENT_EDUCATION",
+        "TOOL_APPROVED_RETRIEVAL",
+        "RETRIEVAL_FAILED"
       ]
     },
     {
@@ -841,10 +1001,11 @@
       "actual_disposition": "routine_review",
       "protocol_id": null,
       "citations_count": 0,
-      "latency_ms": 0.05,
+      "latency_ms": 0.18,
       "audit_codes": [
         "SESSION_CREATED",
-        "SCOPE_VIOLATION_BLOCKED"
+        "SAFETY_CHECKED",
+        "SAFETY_STOP"
       ]
     }
   ]

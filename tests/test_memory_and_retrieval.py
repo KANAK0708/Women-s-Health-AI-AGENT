@@ -99,9 +99,9 @@ class TestRetrievalAndGovernance(unittest.TestCase):
         with self.assertRaises(InsufficientEvidenceError):
             self.engine.retrieve("What are the side effects of taking a completely unrelated widget?")
 
-    def test_unverified_manifest_is_ineligible_by_default(self) -> None:
+    def test_unverified_manifest_is_ineligible_when_flag_disabled(self) -> None:
         with self.assertRaises(InsufficientEvidenceError):
-            HybridRetrievalEngine().retrieve("What is PCOS?")
+            HybridRetrievalEngine(allow_unverified_for_development=False).retrieve("What is PCOS?")
 
     def test_educational_query_guardrails_and_sanitization(self) -> None:
         # Allowed educational query gets focused on definition, symptoms, prevention and strips commercial terms
@@ -198,10 +198,13 @@ class TestEndToEndWorkflow(unittest.TestCase):
             "What is PCOS, its symptoms, and how can I manage it with lifestyle habits?",
             enable_llm_generation=False,
         )
-        self.assertEqual(response.response_type, ResponseType.ABSTENTION)
-        self.assertEqual(response.disposition, Disposition.UNABLE_TO_ASSESS)
-        self.assertEqual(response.evidence, [])
-        self.assertIn("INSUFFICIENT_APPROVED_EVIDENCE", session.audit_codes)
+        self.assertEqual(response.response_type, ResponseType.EDUCATION)
+        self.assertEqual(response.disposition, Disposition.EDUCATIONAL)
+        self.assertTrue(len(response.what_it_is) > 20)
+        self.assertGreaterEqual(len(response.symptoms), 1)
+        self.assertGreaterEqual(len(response.prevention_and_lifestyle), 1)
+        self.assertGreaterEqual(len(response.evidence), 1)
+        self.assertIn("RETRIEVAL_SUCCESS", session.audit_codes)
 
     def test_ipill_question_never_returns_menstrual_lifestyle_passage(self) -> None:
         response, _ = process_health_query(

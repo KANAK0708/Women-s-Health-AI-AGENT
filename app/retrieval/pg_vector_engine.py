@@ -365,12 +365,13 @@ def get_retrieval_engine(
     *,
     force_in_memory: bool = False,
     database_url: Optional[str] = None,
+    allow_unverified_for_development: bool = True,
 ) -> PgVectorHybridEngine | HybridRetrievalEngine:
     """Factory returning PgVectorHybridEngine if PostgreSQL is configured and reachable;
     otherwise gracefully falls back to local manifest HybridRetrievalEngine.
     """
     if force_in_memory:
-        return HybridRetrievalEngine()
+        return HybridRetrievalEngine(allow_unverified_for_development=allow_unverified_for_development)
 
     target_url = database_url or os.getenv(DATABASE_URL_ENV)
     if target_url:
@@ -382,5 +383,5 @@ def get_retrieval_engine(
         except Exception:
             logger.warning("Failed connecting to PostgreSQL; using local retrieval eligibility rules")
 
-    return HybridRetrievalEngine()
+    return HybridRetrievalEngine(allow_unverified_for_development=allow_unverified_for_development)
 

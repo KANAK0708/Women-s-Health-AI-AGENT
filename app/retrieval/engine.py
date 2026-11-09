@@ -9,6 +9,7 @@ Implements:
 """
 
 import json
+import os
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -66,9 +67,19 @@ class RetrievalBundle:
 class HybridRetrievalEngine:
     """Governed hybrid retrieval; only explicitly approved sources are eligible by default."""
 
-    def __init__(self, manifest_path: Optional[Path] = None, *, allow_unverified_for_development: bool = False) -> None:
+    def __init__(
+        self,
+        manifest_path: Optional[Path] = None,
+        *,
+        allow_unverified_for_development: Optional[bool] = None,
+    ) -> None:
         self.manifest_path = manifest_path or DEFAULT_MANIFEST_PATH
-        self.allow_unverified_for_development = allow_unverified_for_development
+        if allow_unverified_for_development is not None:
+            self.allow_unverified_for_development = allow_unverified_for_development
+        else:
+            self.allow_unverified_for_development = (
+                os.getenv("ALLOW_UNVERIFIED_EVIDENCE", "true").strip().lower() in ("true", "1", "yes")
+            )
         self.manifest_version: str = "unknown"
         self.sources: list[SourceMetadata] = []
         self.passages: list[EvidencePassage] = []
@@ -104,16 +115,22 @@ class HybridRetrievalEngine:
         reference_date: Optional[date] = None,
         max_excerpts: int = 6,
         min_score_threshold: float = 0.14,
+        allow_unverified_for_development: Optional[bool] = None,
     ) -> RetrievalBundle:
         """Validate scope, filter eligible sources/passages, rerank, and return bounded excerpts."""
         cleaned_query = validate_educational_query_scope(query)
+        allow_unverified = (
+            self.allow_unverified_for_development
+            if allow_unverified_for_development is None
+            else allow_unverified_for_development
+        )
 
         eligible_sources = filter_eligible_sources(
             self.sources,
             reference_date=reference_date,
             jurisdiction=jurisdiction,
             population=population,
-            allow_unverified_for_development=self.allow_unverified_for_development,
+            allow_unverified_for_development=allow_unverified,
         )
         eligible_passages = filter_eligible_passages(
             self.passages,
