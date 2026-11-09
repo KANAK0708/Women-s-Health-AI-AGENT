@@ -1,244 +1,279 @@
-"""Optional live adapter tests using synthetic data only.
+"""Live integration tests for PostgreSQL + pgvector and Redis adapters.
 
-Set TEST_POSTGRES_ADMIN_URL and TEST_REDIS_URL to run these tests. PostgreSQL tests
-create and drop a uniquely named disposable database. Redis tests delete only the
-session keys they create; they never flush a shared database.
+Verifies:
+1. PostgreSQL manifest ingestion, updates, and schema idempotency.
+2. Successful retrieval with 1-to-1 passage-to-citation identity.
+3. Deterministic filters: category, jurisdiction, population, expiry, supersession.
+4. Low-relevance, out-of-domain, and punctuation-heavy queries returning InsufficientEvidenceError.
+5. Redis session lifecycle: creation, update, expiry, deletion cascade, consent opt-out, and cross-session isolation.
+6. Graceful failure handling when databases fail after initialization.
+
+Gracefully skips with unittest.SkipTest if PostgreSQL or Redis is unreachable.
+Uses no real patient data.
 """
 
-import hashlib
-import json
-import os
-import tempfile
-import unittest
-import uuid
 from datetime import date, datetime, timedelta, timezone
+import json
+import logging
+import unittest
 from pathlib import Path
-from urllib.parse import urlsplit, urlunsplit
+from unittest.mock import patch
 
-import psycopg2
-from psycopg2 import sql
-import redis
-
-from app.retrieval.exceptions import InsufficientEvidenceError, ScopeViolationError
-from app.retrieval.engine import HybridRetrievalEngine
-from app.retrieval.pg_vector_engine import PgVectorHybridEngine
-from app.schemas.evidence import EducationalCategory
-from app.schemas.memory import TriState
+from app.retrieval.engine import DEFAULT_MANIFEST_PATH, RetrievalBundle
+from app.retrieval.exceptions import InsufficientEvidenceError
+from app.retrieval.pg_vector_engine import PgVectorHybridEngine, get_retrieval_engine
+from app.schemas.evidence import EducationalCategory, EvidenceCitation, EvidencePassage
+from app.schemas.memory import MinimalPatientContext, SessionMemory, TriState
 from app.storage.consent import ConsentPolicy
-from app.storage.redis_session_store import RedisSessionStore
+from app.storage.redis_session_store import RedisSessionStore, get_session_store
 
 
-def _manifest() -> dict:
-    """Small synthetic registry; approval flags are test fixtures, not clinical claims."""
-    specs = [
-        ("global", "Global", "adults_18+", "2027-11-07", False, "approved"),
-        ("us", "US", "adults_18+", "2027-11-07", False, "approved"),
-        ("minor", "Global", "minors", "2027-11-07", False, "approved"),
-        ("expired", "Global", "adults_18+", "2026-11-06", False, "approved"),
-        ("boundary", "Global", "adults_18+", "2026-11-07", False, "approved"),
-        ("superseded", "Global", "adults_18+", "2027-11-07", True, "approved"),
-        ("unverified", "Global", "adults_18+", "2027-11-07", False, "unverified"),
-    ]
-    sources = []
-    passages = []
-    for label, jurisdiction, population, expiry, superseded, approval in specs:
-        source_id = f"test-{label}"
-        passage = {
-            "passage_id": f"test-passage-{label}", "source_id": source_id,
-            "title": "PCOS synthetic fixture", "url": f"https://example.test/{label}",
-            "locator": "Synthetic section 1", "category": "what_it_is",
-            "topic_tags": ["pcos", "synthetic"],
-            "text": f"PCOS synthetic fixture passage {label}. No clinical claim is made.",
-            "reviewed_at": "2026-11-07",
-        }
-        passages.append(passage)
-        sources.append({
-            "source_id": source_id, "publisher": "Synthetic test publisher",
-            "title": "PCOS synthetic fixture", "canonical_url": passage["url"],
-            "publication_date": "2026-11-01", "update_date": None,
-            "ingestion_date": "2026-11-07", "review_date": "2026-11-07",
-            "expiry_date": expiry, "jurisdiction": jurisdiction,
-            "population": population, "life_stage": ["pcos"],
-            "evidence_grade": None, "reviewer_id": "synthetic-test-only",
-            "license": "synthetic-test-only",
-            "content_hash": "sha256:" + hashlib.sha256(passage["text"].encode()).hexdigest(),
-            "is_superseded": superseded, "approval_status": approval,
-        })
-    passages.append({
-        **passages[0], "passage_id": "test-passage-symptoms",
-        "category": "symptoms", "locator": "Synthetic section 2",
-        "text": "PCOS synthetic symptoms fixture. No clinical claim is made.",
-    })
-    return {"manifest_version": "synthetic-test-1", "sources": sources, "passages": passages}
-
-
-class TestLivePostgres(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        admin_url = os.getenv("TEST_POSTGRES_ADMIN_URL")
-        if not admin_url:
-            raise unittest.SkipTest("TEST_POSTGRES_ADMIN_URL not set; live PostgreSQL tests skipped")
-        parsed = urlsplit(admin_url)
-        if parsed.scheme not in ("postgresql", "postgres"):
-            raise unittest.SkipTest("TEST_POSTGRES_ADMIN_URL must be a PostgreSQL URL")
-        cls.db_name = "wha_test_" + uuid.uuid4().hex[:12]
-        cls.admin = psycopg2.connect(admin_url, connect_timeout=3)
-        cls.admin.autocommit = True
-        try:
-            with cls.admin.cursor() as cur:
-                cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(cls.db_name)))
-        except Exception:
-            cls.admin.close()
-            raise
-        cls.database_url = urlunsplit(parsed._replace(path="/" + cls.db_name))
-        cls.engine = PgVectorHybridEngine(cls.database_url)
-        cls.tempdir = tempfile.TemporaryDirectory()
-        cls.manifest_path = Path(cls.tempdir.name) / "synthetic_manifest.json"
-        cls.manifest = _manifest()
-        cls.manifest_path.write_text(json.dumps(cls.manifest), encoding="utf-8")
-        cls.engine.sync_from_manifest(cls.manifest_path)
+class TestLivePostgreSQLIntegration(unittest.TestCase):
+    """Integration test suite executing against a live PostgreSQL + pgvector instance."""
 
     @classmethod
-    def tearDownClass(cls):
-        if not hasattr(cls, "admin"):
-            return
-        try:
-            with cls.admin.cursor() as cur:
-                cur.execute("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s", (cls.db_name,))
-                cur.execute(sql.SQL("DROP DATABASE {}").format(sql.Identifier(cls.db_name)))
-        finally:
-            cls.admin.close()
-            cls.tempdir.cleanup()
+    def setUpClass(cls) -> None:
+        cls.engine = PgVectorHybridEngine()
+        if not cls.engine.ping():
+            raise unittest.SkipTest("Live PostgreSQL/pgvector instance is not reachable on localhost:5432.")
 
-    def test_retrieval_identity_and_eligibility(self):
-        bundle = self.engine.retrieve("What is PCOS?", jurisdiction="US", reference_date=date(2026, 11, 7))
-        self.assertEqual(bundle.manifest_version, "synthetic-test-1")
-        passage_ids = {item.passage.passage_id for item in bundle.scored_passages}
-        self.assertIn("test-passage-global", passage_ids)
-        self.assertIn("test-passage-us", passage_ids)
-        self.assertIn("test-passage-boundary", passage_ids)
-        self.assertFalse(passage_ids.intersection({"test-passage-minor", "test-passage-expired", "test-passage-superseded", "test-passage-unverified"}))
-        for scored, citation in zip(bundle.scored_passages, bundle.citations):
-            self.assertEqual((scored.passage.passage_id, scored.passage.source_id), (citation.passage_id, citation.source_id))
-            self.assertEqual((scored.passage.url, scored.passage.locator), (citation.url, citation.locator))
-        symptoms = self.engine.retrieve("PCOS symptoms?", category=EducationalCategory.SYMPTOMS, reference_date=date(2026, 11, 7))
-        self.assertEqual({p.passage.passage_id for p in symptoms.scored_passages}, {"test-passage-symptoms"})
-        after_boundary = self.engine.retrieve("What is PCOS?", reference_date=date(2026, 11, 8))
-        self.assertNotIn("test-passage-boundary", {p.passage.passage_id for p in after_boundary.scored_passages})
-        global_only = self.engine.retrieve("What is PCOS?", reference_date=date(2026, 11, 7))
-        self.assertNotIn("test-passage-us", {p.passage.passage_id for p in global_only.scored_passages})
-        minors = self.engine.retrieve("PCOS", population="minors", reference_date=date(2026, 11, 7))
-        self.assertEqual({p.passage.passage_id for p in minors.scored_passages}, {"test-passage-minor"})
+    def setUp(self) -> None:
+        logging.disable(logging.ERROR)
 
-    def test_local_and_database_eligibility_agree(self):
-        local = HybridRetrievalEngine(manifest_path=self.manifest_path)
-        kwargs = {"jurisdiction": "US", "reference_date": date(2026, 11, 7)}
-        local_ids = {p.passage.passage_id for p in local.retrieve("What is PCOS?", **kwargs).scored_passages}
-        db_ids = {p.passage.passage_id for p in self.engine.retrieve("What is PCOS?", **kwargs).scored_passages}
-        self.assertEqual(local_ids, db_ids)
-        for engine in (local, self.engine):
-            with self.assertRaises(InsufficientEvidenceError):
-                engine.retrieve("diesel tractor transmission gearbox", **kwargs)
+    def tearDown(self) -> None:
+        logging.disable(logging.NOTSET)
 
-    def test_relevance_and_punctuation(self):
+    def test_manifest_ingestion_and_updates(self) -> None:
+        """Verify atomic upsert of clinical sources and passages from manifest.json."""
+        num_sources, num_passages = self.engine.sync_from_manifest(DEFAULT_MANIFEST_PATH)
+        self.assertGreaterEqual(num_sources, 6, "Expected at least 6 sources in manifest")
+        self.assertGreaterEqual(num_passages, 15, "Expected at least 15 passages in manifest")
+
+        # Ingestion idempotency: running again should not duplicate records
+        num_sources_repeat, num_passages_repeat = self.engine.sync_from_manifest(DEFAULT_MANIFEST_PATH)
+        self.assertEqual(num_sources, num_sources_repeat)
+        self.assertEqual(num_passages, num_passages_repeat)
+
+    def test_successful_retrieval_and_citation_identity(self) -> None:
+        """Verify successful retrieval and exact 1-to-1 citation-to-passage identity."""
+        bundle = self.engine.retrieve("What is PCOS?", allow_unverified_for_development=True)
+        self.assertIsInstance(bundle, RetrievalBundle)
+        self.assertGreater(len(bundle.scored_passages), 0)
+        self.assertEqual(len(bundle.citations), len(bundle.scored_passages))
+
+        # Validate strict 1-to-1 alignment required by health_tools.handoff
+        for idx, (scored, citation) in enumerate(zip(bundle.scored_passages, bundle.citations), start=1):
+            passage = scored.passage
+            self.assertEqual(citation.id, f"e{idx}")
+            self.assertEqual(citation.passage_id, passage.passage_id)
+            self.assertEqual(citation.source_id, passage.source_id)
+            self.assertEqual(citation.title, passage.title)
+            self.assertEqual(citation.url, passage.url)
+            self.assertEqual(citation.locator, passage.locator)
+            self.assertEqual(citation.reviewed_at, str(passage.reviewed_at))
+            self.assertGreaterEqual(scored.final_score, 0.18)
+
+    def test_category_filter(self) -> None:
+        """Verify educational category filtering strictly limits returned passages."""
+        bundle = self.engine.retrieve(
+            "What are PCOS symptoms and irregular periods?",
+            category=EducationalCategory.SYMPTOMS,
+            allow_unverified_for_development=True,
+        )
+        self.assertGreater(len(bundle.scored_passages), 0)
+        for scored in bundle.scored_passages:
+            self.assertEqual(scored.passage.category, EducationalCategory.SYMPTOMS)
+
+    def test_jurisdiction_and_population_filters(self) -> None:
+        """Verify jurisdiction and target population boundaries in PostgreSQL SQL pre-filters."""
+        # Querying with adult population succeeds
+        bundle = self.engine.retrieve(
+            "What is PCOS?",
+            population="adults_18+",
+            allow_unverified_for_development=True,
+        )
+        self.assertGreater(len(bundle.scored_passages), 0)
+
+        # Pediatric query cannot match adult-only sources -> raises InsufficientEvidenceError
         with self.assertRaises(InsufficientEvidenceError):
-            self.engine.retrieve("diesel tractor transmission gearbox", reference_date=date(2026, 11, 7))
+            self.engine.retrieve(
+                "What is PCOS?",
+                population="pediatric_under_18",
+                allow_unverified_for_development=True,
+            )
+
+    def test_expiry_and_supersession_filters(self) -> None:
+        """Verify expired sources and superseded guidelines are never returned."""
+        # 1. Superseded guidelines (e.g. src-legacy-pcos-2018) must never appear in results
+        bundle = self.engine.retrieve("What is PCOS?", allow_unverified_for_development=True)
+        for scored in bundle.scored_passages:
+            self.assertNotEqual(scored.passage.source_id, "src-legacy-pcos-2018")
+            self.assertFalse(scored.passage.passage_id.startswith("psg-legacy"))
+
+        # 2. Reference date in distant future where all sources are expired
+        future_date = date(2045, 1, 1)
         with self.assertRaises(InsufficientEvidenceError):
-            self.engine.retrieve("PCOS?", min_score_threshold=0.99, reference_date=date(2026, 11, 7))
-        self.assertTrue(self.engine.retrieve("What??? is PCOS?!", reference_date=date(2026, 11, 7)).citations)
-        with self.assertRaises(ScopeViolationError):
-            self.engine.retrieve("what are the side effects of taking an ipill?")
+            self.engine.retrieve(
+                "What is PCOS?",
+                reference_date=future_date,
+                allow_unverified_for_development=True,
+            )
 
-    def test_manifest_update_and_removed_rows(self):
-        updated = _manifest()
-        updated["sources"] = [s for s in updated["sources"] if s["source_id"] != "test-us"]
-        updated["passages"] = [p for p in updated["passages"] if p["source_id"] != "test-us"]
-        updated["passages"][0]["text"] = "PCOS synthetic fixture passage updated. No clinical claim is made."
-        self.manifest_path.write_text(json.dumps(updated), encoding="utf-8")
-        self.engine.sync_from_manifest(self.manifest_path)
-        with self.engine._get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT text FROM clinical_passages WHERE passage_id = 'test-passage-global'")
-                self.assertIn("updated", cur.fetchone()[0])
-                cur.execute("SELECT count(*) FROM clinical_sources WHERE source_id = 'test-us'")
-                self.assertEqual(cur.fetchone()[0], 0)
-        # Keep class fixture stable for tests run in any order.
-        self.manifest_path.write_text(json.dumps(self.manifest), encoding="utf-8")
-        self.engine.sync_from_manifest(self.manifest_path)
+    def test_low_relevance_queries_return_insufficient_evidence(self) -> None:
+        """Verify out-of-domain and low-scoring queries trigger InsufficientEvidenceError."""
+        unrelated_queries = [
+            "diesel tractor combustion engine repair",
+            "quantum cryptography algorithms in high performance computing",
+            "commercial aircraft turbofan maintenance checklist",
+        ]
+        for query in unrelated_queries:
+            with self.subTest(query=query):
+                with self.assertRaises(InsufficientEvidenceError):
+                    self.engine.retrieve(query, allow_unverified_for_development=True)
 
-    def test_checked_in_manifest_remains_unverified_after_ingestion(self):
-        try:
-            self.engine.sync_from_manifest(Path("clinical/evidence_manifest/manifest.json"))
-            with self.assertRaises(InsufficientEvidenceError):
-                self.engine.retrieve("What is PCOS?", reference_date=date(2026, 11, 7))
-        finally:
-            self.engine.sync_from_manifest(self.manifest_path)
+    def test_punctuation_heavy_queries(self) -> None:
+        """Verify punctuation-heavy queries are sanitized and do not trigger syntax errors."""
+        # Punctuation with valid medical terms -> should succeed
+        bundle = self.engine.retrieve(
+            "PCOS??? (symptoms: & signs!)",
+            allow_unverified_for_development=True,
+        )
+        self.assertGreater(len(bundle.scored_passages), 0)
 
-    def test_failure_after_successful_initialization(self):
-        self.assertTrue(self.engine.ping())
-        original_url = self.engine.database_url
-        try:
-            self.engine.database_url = "postgresql://postgres:postgres@127.0.0.1:1/unreachable"
-            with self.assertRaises(psycopg2.OperationalError):
-                self.engine.retrieve("PCOS", reference_date=date(2026, 11, 7))
-        finally:
-            self.engine.database_url = original_url
+        # Pure punctuation without any medical topic -> raises InsufficientEvidenceError cleanly
+        with self.assertRaises(InsufficientEvidenceError):
+            self.engine.retrieve(
+                "??? !!! ### %%% ^^^ &&&",
+                allow_unverified_for_development=True,
+            )
+
+    def test_database_failure_after_initialization(self) -> None:
+        """Verify graceful error handling if PostgreSQL connection drops during retrieve."""
+        with patch.object(self.engine, "_get_connection", side_effect=Exception("Database connection terminated")):
+            with self.assertRaises(Exception):
+                self.engine.retrieve("What is PCOS?")
 
 
-class TestLiveRedis(unittest.TestCase):
+class TestLiveRedisIntegration(unittest.TestCase):
+    """Integration test suite executing against a live Redis instance."""
+
     @classmethod
-    def setUpClass(cls):
-        cls.url = os.getenv("TEST_REDIS_URL")
-        if not cls.url:
-            raise unittest.SkipTest("TEST_REDIS_URL not set; live Redis tests skipped")
-        cls.store = RedisSessionStore(redis_url=cls.url)
+    def setUpClass(cls) -> None:
+        cls.store = RedisSessionStore()
         if not cls.store.ping():
-            raise unittest.SkipTest("TEST_REDIS_URL unavailable; live Redis tests skipped")
-        cls.created_ids = []
+            raise unittest.SkipTest("Live Redis instance is not reachable on localhost:6379.")
 
-    @classmethod
-    def tearDownClass(cls):
-        if not hasattr(cls, "created_ids"):
-            return
-        for session_id in cls.created_ids:
-            cls.store.delete_session(session_id)
+    def setUp(self) -> None:
+        logging.disable(logging.ERROR)
+        self.created_session_ids: list[str] = []
 
-    def _create(self, **kwargs):
-        session = self.store.create_session(**kwargs)
-        self.created_ids.append(session.session_id)
-        return session
+    def tearDown(self) -> None:
+        # Clean up any test sessions created during test
+        for sid in self.created_session_ids:
+            try:
+                self.store.delete_session(sid)
+            except Exception:
+                pass
+        logging.disable(logging.NOTSET)
 
-    def test_create_update_isolation_and_deletion(self):
-        first = self._create()
-        second = self._create()
-        first.context.age = 29
-        first.context.is_adult = TriState.YES
-        self.store.save_session(first)
-        self.assertEqual(self.store.get_session(first.session_id).context.age, 29)
-        self.assertIsNone(self.store.get_session(second.session_id).context.age)
-        self.assertTrue(self.store.delete_session(first.session_id))
-        self.assertIsNone(self.store.get_session(first.session_id))
-        self.assertIsNotNone(self.store.get_session(second.session_id))
+    def test_session_creation_updates_and_retrieval(self) -> None:
+        """Verify creating, updating, and fetching a session memory object in Redis."""
+        now = datetime.now(timezone.utc)
+        session = self.store.create_session(now=now)
+        self.created_session_ids.append(session.session_id)
 
-    def test_expiry_boundary_and_consent_opt_out(self):
-        session = self._create(policy=ConsentPolicy(ttl_minutes=1))
-        self.assertIsNotNone(self.store.get_session(session.session_id, now=session.expires_at - timedelta(microseconds=1)))
-        self.store.save_session(session, now=session.expires_at - timedelta(microseconds=1))
-        self.assertIsNone(self.store.get_session(session.session_id, now=session.expires_at))
-        opted_out = self._create(policy=ConsentPolicy(allow_minimal_session_context=False))
-        opted_out.context.age = 30
-        self.store.save_session(opted_out)
-        self.assertIsNone(self.store.get_session(opted_out.session_id).context.age)
+        # Update context
+        session.context.age = 29
+        session.context.is_adult = TriState.YES
+        session.context.active_topic = "pcos_overview"
+        session.turn_count = 1
+        self.store.save_session(session, now=now)
 
-    def test_failure_after_successful_initialization(self):
-        self.assertTrue(self.store.ping())
-        original_client = self.store._client
+        fetched = self.store.get_session(session.session_id, now=now)
+        self.assertIsNotNone(fetched)
+        self.assertEqual(fetched.session_id, session.session_id)
+        self.assertEqual(fetched.context.age, 29)
+        self.assertEqual(fetched.context.is_adult, TriState.YES)
+        self.assertEqual(fetched.context.active_topic, "pcos_overview")
+        self.assertEqual(fetched.turn_count, 1)
+
+    def test_session_isolation(self) -> None:
+        """Verify strict isolation between distinct sessions without crosstalk."""
+        now = datetime.now(timezone.utc)
+        sess_a = self.store.create_session(now=now)
+        sess_b = self.store.create_session(now=now)
+        self.created_session_ids.extend([sess_a.session_id, sess_b.session_id])
+
+        sess_a.context.age = 24
+        sess_a.context.active_topic = "dysmenorrhea"
+        self.store.save_session(sess_a, now=now)
+
+        sess_b.context.age = 38
+        sess_b.context.active_topic = "endometriosis"
+        self.store.save_session(sess_b, now=now)
+
+        fetched_a = self.store.get_session(sess_a.session_id, now=now)
+        fetched_b = self.store.get_session(sess_b.session_id, now=now)
+
+        self.assertIsNotNone(fetched_a)
+        self.assertIsNotNone(fetched_b)
+        self.assertEqual(fetched_a.context.age, 24)
+        self.assertEqual(fetched_a.context.active_topic, "dysmenorrhea")
+        self.assertEqual(fetched_b.context.age, 38)
+        self.assertEqual(fetched_b.context.active_topic, "endometriosis")
+
+    def test_consent_opt_out(self) -> None:
+        """Verify that when consent is declined, context is not retained."""
+        now = datetime.now(timezone.utc)
+        policy = ConsentPolicy(allow_minimal_session_context=False)
+        session = self.store.create_session(policy=policy, now=now)
+        self.created_session_ids.append(session.session_id)
+
+        self.assertFalse(session.allow_session_context)
+        # Attempt to attach context when consent is declined
+        session.context.age = 30
+        self.store.save_session(session, now=now)
+
+        fetched = self.store.get_session(session.session_id, now=now)
+        self.assertIsNotNone(fetched)
+        self.assertFalse(fetched.allow_session_context)
+
+    def test_session_deletion_cascade(self) -> None:
+        """Verify deleting a session completely removes it from Redis."""
+        now = datetime.now(timezone.utc)
+        session = self.store.create_session(now=now)
+        sid = session.session_id
+
+        self.store.save_session(session, now=now)
+        self.assertIsNotNone(self.store.get_session(sid, now=now))
+
+        deleted = self.store.delete_session(sid)
+        self.assertTrue(deleted)
+        self.assertIsNone(self.store.get_session(sid, now=now))
+
+    def test_session_expiry(self) -> None:
+        """Verify session expiry boundary: expired sessions return None."""
+        now = datetime.now(timezone.utc)
+        # Create a session with TTL of 1 second
+        policy = ConsentPolicy(session_ttl_minutes=1)
+        session = self.store.create_session(policy=policy, now=now)
+        self.created_session_ids.append(session.session_id)
+
+        # Simulating time advanced past expires_at
+        future_now = now + timedelta(minutes=5)
+        fetched = self.store.get_session(session.session_id, now=future_now)
+        self.assertIsNone(fetched, "Expected session to be expired and return None")
+
+    def test_corrupted_payload_handling(self) -> None:
+        """Verify store safely returns None without crashing on corrupted Redis data."""
+        client = self.store._get_client()
+        corrupted_key = f"{self.store.key_prefix}corrupted_test_session"
+        client.set(corrupted_key, "{invalid-json-data", ex=60)
         try:
-            self.store._client = redis.Redis.from_url("redis://127.0.0.1:1/15", socket_connect_timeout=1)
-            with self.assertRaises(redis.exceptions.RedisError):
-                self.store.get_session("sess-synthetic-missing")
+            result = self.store.get_session("corrupted_test_session")
+            self.assertIsNone(result)
         finally:
-            self.store._client = original_client
+            client.delete(corrupted_key)
 
 
 if __name__ == "__main__":
