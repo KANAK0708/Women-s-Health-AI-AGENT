@@ -34,6 +34,72 @@ retrieval bundle. Missing sections are identified explicitly. Follow-ups such as
 `What about exercise?` use the active topic only when session context is available.
 
 
+## System Architecture Diagram
+
+```mermaid
+flowchart TD
+    User((User)) -->|submits query| CLI["CLI<br>[main.py]"]
+
+    subgraph UserEntry["User Entry"]
+        CLI -->|processes turn| AppService["Application Service<br>[service.py]"]
+        CLI -->|configures tools| ToolsOrch["Tools Orchestrator<br>[workflow.py]"]
+        AppService -->|runs workflow| ToolsOrch
+    end
+
+    subgraph SessionTasks["Session and Tasks"]
+        ContextTrack["Context Tracking<br>[context_tracker.py]"]
+        SessionStore[("Session Store")]
+        PendingTasks["Pending Tasks<br>[pending_tasks.py]"]
+        MemorySchema["Memory Schema<br>[memory.py]"]
+
+        SessionStore -->|stores state| MemorySchema
+    end
+
+    subgraph EvidenceAnswers["Evidence and Answers"]
+        AnswerSelection["Answer Selection"]
+        HybridRetrieval["Hybrid Retrieval<br>[engine.py]"]
+        ClaimVerification["Claim Verification<br>[verifier.py]"]
+        EvidenceHandoff["Evidence Handoff<br>[handoff.py]"]
+        PostgresRetrieval[("Postgres Retrieval")]
+        EvidenceContracts["Evidence Contracts<br>[evidence.py]"]
+        RetrievalGuardrails["Retrieval Guardrails<br>[filters.py]"]
+        PassageReranking["Passage Reranking<br>[reranker.py]"]
+
+        HybridRetrieval -->|uses backend| PostgresRetrieval
+        HybridRetrieval -->|applies guardrails| RetrievalGuardrails
+        HybridRetrieval -->|ranks passages| PassageReranking
+        HybridRetrieval -->|returns evidence| EvidenceContracts
+
+        PostgresRetrieval -->|applies guardrails| RetrievalGuardrails
+        PostgresRetrieval -->|ranks passages| PassageReranking
+
+        ClaimVerification -->|checks citations| EvidenceContracts
+    end
+
+    subgraph HealthTools["Health Tools"]
+        CycleAnalysis["Cycle Analysis<br>[cycle_history.py]"]
+        PubMedResearch["PubMed Research<br>[pubmed.py]"]
+    end
+
+    NCBI((NCBI))
+
+    %% Connections from Application Service
+    AppService -->|updates context| ContextTrack
+    AppService -->|loads and saves| SessionStore
+    AppService -->|manages tasks| PendingTasks
+    AppService -->|selects passages| AnswerSelection
+    AppService -->|checks answer| ClaimVerification
+
+    %% Connections from Tools Orchestrator
+    ToolsOrch -->|requests evidence| HybridRetrieval
+    ToolsOrch -->|adapts evidence| EvidenceHandoff
+    ToolsOrch -->|analyzes cycles| CycleAnalysis
+    ToolsOrch -->|dispatches research| PubMedResearch
+
+    %% Research external connection
+    PubMedResearch -->|queries research| NCBI
+```
+
 ## Implementation Plan and Team Diagrams
 
 See the [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the architecture, clinical safety workflow, evidence lifecycle, validation gates, roadmap, and first-sprint backlog. For an offline shareable version with eight rendered diagrams, open [the HTML handoff](docs/IMPLEMENTATION_PLAN.html) in a browser.
@@ -50,7 +116,6 @@ text, dates, locators, reviewer details, hashes, and reuse rights require review
 
 The system enforces two strictly isolated trust domains:
 
-1. **Clinical Evidence & Hybrid Retrieval Engine (`app/retrieval/`, `clinical/evidence_manifest/`)**
 1. **Clinical Evidence & Hybrid Retrieval Engine (`app/retrieval/`, `clinical/evidence_manifest/`)**
    - **PostgreSQL + pgvector (`app/retrieval/pg_vector_engine.py`)**: Production-grade hybrid search combining PostgreSQL full-text search and `pgvector` cosine similarity, filtered by explicit approval, non-supersession, expiry, population, jurisdiction, topic anchors, and calibrated score threshold.
    - **In-Memory Fallback (`app/retrieval/engine.py`, `app/retrieval/reranker.py`)**: Local hybrid search over `manifest.json` with identical eligibility and topic-anchor rules. Expiry is inclusive on the date in both backends.
