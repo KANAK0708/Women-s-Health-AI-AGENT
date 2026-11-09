@@ -13,3 +13,4 @@ pydantic
 redis
 pgvector
 psycopg2-binary
+numpy

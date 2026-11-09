@@ -1,6 +1,38 @@
 # Women's Health AI Agent
 
-An evidence-grounded women's health education and care-navigation assistant focused on adult menstrual health and PCOS education (**what a condition is**, **recognized symptoms**, and **evidence-based lifestyle & prevention habits**).
+An evidence-grounded women's health education assistant for adult menstrual health and PCOS. This is a development build; source-review metadata and safety rules require independent clinical verification.
+
+## Integrated tools workflow
+
+The CLI now connects session context and hybrid evidence retrieval to cycle
+calculations, explicitly authorized PubMed research, and citation-based output.
+Session retention is off by default in the CLI; use `--remember` to opt in.
+No API key or model call is needed for local evidence and calculations.
+
+```bash
+python3 main.py --query "What is PCOS and what are its symptoms?"
+python3 main.py --query "What are PCOS symptoms?"
+python3 main.py --query "Calculate my cycle intervals" --period-starts 2026-08-01 2026-09-05 2026-10-08 --as-of 2026-11-06
+python3 main.py --query "Find PCOS research" --allow-external-research --research-query "PCOS systematic review"
+python3 main.py --remember
+python3 -m unittest discover -s tests -v
+```
+
+In interactive mode use `/quit` to exit, `/forget` to delete the active session,
+or `/cancel` to clear a pending cycle calculation. With `--remember`, ask to
+calculate cycle intervals, send ISO start dates and a reference date over replies,
+then confirm the proposed inputs before calculation. See
+[the pending-task contract](docs/PENDING_TASK_CONTRACT.md).
+Use `--json` for the structured response. External research sends only the
+separately provided research query to NCBI; exclude personal details.
+See [the orchestration guide](docs/ORCHESTRATION.md) and
+[the shared team contract](docs/TEAM_CONTRACT.md) for ownership and integration.
+The standalone `workflow_demo` commands remain synthetic demonstrations.
+
+Answers now select the requested sections rather than displaying the whole
+retrieval bundle. Missing sections are identified explicitly. Follow-ups such as
+`What about exercise?` use the active topic only when session context is available.
+
 
 ## Implementation Plan and Team Diagrams
 
@@ -19,9 +51,10 @@ text, dates, locators, reviewer details, hashes, and reuse rights require review
 The system enforces two strictly isolated trust domains:
 
 1. **Clinical Evidence & Hybrid Retrieval Engine (`app/retrieval/`, `clinical/evidence_manifest/`)**
-   - **PostgreSQL + pgvector (`app/retrieval/pg_vector_engine.py`)**: Hybrid search combining PostgreSQL full-text search and `pgvector` cosine similarity, filtered by explicit approval, non-supersession, expiry, population, jurisdiction, topic anchors, and a PostgreSQL-specific score threshold.
-   - **In-Memory Fallback (`app/retrieval/engine.py`, `app/retrieval/reranker.py`)**: Local hybrid search over `manifest.json` with the same eligibility and topic-anchor rules. Its IDF-based score differs from PostgreSQL's `ts_rank_cd` score; thresholds are calibrated separately. Expiry is inclusive on the date in both backends.
-   - **Discovery Search (`tools.py`, `app/retrieval/engine.py`)**: Wikipedia and DuckDuckGo are for offline discovery only. Missing approved evidence produces an abstention in the application answer path.
+1. **Clinical Evidence & Hybrid Retrieval Engine (`app/retrieval/`, `clinical/evidence_manifest/`)**
+   - **PostgreSQL + pgvector (`app/retrieval/pg_vector_engine.py`)**: Production-grade hybrid search combining PostgreSQL full-text search and `pgvector` cosine similarity, filtered by explicit approval, non-supersession, expiry, population, jurisdiction, topic anchors, and calibrated score threshold.
+   - **In-Memory Fallback (`app/retrieval/engine.py`, `app/retrieval/reranker.py`)**: Local hybrid search over `manifest.json` with identical eligibility and topic-anchor rules. Expiry is inclusive on the date in both backends.
+   - **Pre-Filtering & Guardrails (`app/retrieval/filters.py`)**: Scopes searches to definitions ("what it is"), symptoms, and lifestyle prevention—blocking prescriptions, medication dosing, and prompt injection attempts.
    - **Offline Discovery & Database Sync (`pipelines/seed_evidence.py`, `pipelines/sync_to_postgres.py`)**: Stages candidates into review queues and synchronizes approved manifests into PostgreSQL.
 
 2. **Ephemeral Patient Session Memory (`app/storage/`, `app/schemas/memory.py`)**
@@ -30,9 +63,9 @@ The system enforces two strictly isolated trust domains:
    - **TriState Context Tracking (`app/storage/context_tracker.py`)**: Uses explicit `TriState` (`yes`, `no`, `not_provided`) so missing pregnancy status, medication use, or age never silently become negative findings.
    - **Clarification Turn Cap**: Enforces a maximum of **2 focused clarification turns**.
 
-3. **Claim-to-Passage Entailment Verification (`app/verification/`)**
-   - **Citation Integrity & Factual Grounding (`app/verification/verifier.py`)**: Evaluates every generated clinical claim against cited passage tokens before displaying it to the user.
-   - **Safety Extrapolation Filter**: Detects high-risk assertions (e.g., "cure", "guaranteed", unverified dosing) and polarity/negation contradictions, automatically triggering safe fallback or filtering unsupported claims.
+3. **Claim-to-Passage Checks (`app/verification/`)**
+   - **Citation and Token Checks (`app/verification/verifier.py`)**: Uses token overlap and rules; this does not establish semantic entailment or clinical correctness.
+   - **Final Answer Gate (`app/workflow/service.py`)**: Every excerpt claim must pass before display. Partial repairs, rejected claims, or verifier errors replace the whole answer with an abstention; unsupported display text is not retained.
 
 ---
 
@@ -71,13 +104,17 @@ python pipelines/sync_to_postgres.py
 │       └── verifier.py        # ClaimVerifier, entailment checks & high-risk extrapolation filters
 ├── clinical/
 │   └── evidence_manifest/
+<<<<<<< HEAD
 │       └── manifest.json      # Versioned, unverified development passages
+=======
+│       └── manifest.json      # Development evidence manifest; review metadata unverified
+>>>>>>> origin/tools
 ├── docs/
 │   ├── IMPLEMENTATION_PLAN.md # Engineering and clinical implementation plan
 │   └── IMPLEMENTATION_PLAN.html # Offline shareable handoff with 8 SVG diagrams
 ├── evals/
 │   ├── development/
-│   │   └── seed_cases.json    # 50 clinician-labeled development benchmark cases
+│   │   └── seed_cases.json    # 50 supplied development cases; clinical labels unverified
 │   ├── rubric/
 │   │   └── scoring.py         # Section 10 release gates scoring rubric
 │   └── run_evals.py           # Automated evaluation runner
@@ -105,8 +142,11 @@ python pipelines/sync_to_postgres.py
    .\venv\Scripts\activate
    ```
 
-2. **Configure environment variables**:
-   Copy `.env.example` to `.env` and set your API keys (`GROQ_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_API_KEY`).
+2. **Credentials**:
+   Local evidence retrieval and cycle arithmetic need no API keys. PubMed can
+   run at low volume without a key; optional `NCBI_API_KEY` and `NCBI_EMAIL` must
+   be set in the process environment. This path does not invoke an LLM or load
+   model credentials from `.env`.
 
 3. **Run the unit and integration test suite**:
    ```powershell

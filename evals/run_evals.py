@@ -1,11 +1,11 @@
-"""Automated benchmark runner for the 50-case development evaluation suite.
+"""Runner for the supplied development scenarios, not a clinical validation.
 
-Executes all 50 clinician-labeled scenarios against the controlled workflow,
-scores them against Section 10 Release Gates, outputs a terminal summary,
-and exports full details to `evals/results/latest_run.json`.
+Checks expected routing, protocol IDs, and citation shape. These checks do not
+establish clinical accuracy, source approval, or readiness for patient use.
 """
 
 import argparse
+import hashlib
 import json
 import sys
 import time
@@ -39,6 +39,8 @@ def run_benchmark(
     verbose: bool = False,
 ) -> tuple[SuiteSummaryReport, list[CaseEvaluationResult]]:
     """Execute the benchmark suite and generate the release gate report."""
+    if enable_llm:
+        raise ValueError("LLM generation is disabled in the integrated workflow; evaluate exact excerpts instead.")
     if not cases_path.exists():
         raise FileNotFoundError(f"Evaluation cases not found at {cases_path}")
 
@@ -48,7 +50,7 @@ def run_benchmark(
     results: list[CaseEvaluationResult] = []
 
     print(f"\n🚀 Running {raw.get('suite_name', 'Evaluation Suite')} ({len(cases)} cases)...")
-    print(f"Mode: {'LLM Synthesis' if enable_llm else 'Deterministic Grounded Retrieval'}")
+    print("Mode: deterministic exact excerpts; development checks only, not clinical validation.")
     print("-" * 75)
 
     for idx, case in enumerate(cases, start=1):
@@ -93,13 +95,21 @@ def run_benchmark(
 
     report = compute_suite_report(results)
     _print_summary(report)
-    _export_results(report, results, output_dir)
+    _export_results(report, results, output_dir, suite_metadata={
+        "version": raw.get("version"),
+        "cases_sha256": hashlib.sha256(cases_path.read_bytes()).hexdigest(),
+        "mode": "deterministic_exact_excerpts",
+        "limitations": [
+            "Provided development labels have not been independently clinically validated here.",
+            "Routing and citation-shape checks do not establish medical correctness or source approval.",
+        ],
+    })
     return report, results
 
 
 def _print_summary(rep: SuiteSummaryReport) -> None:
     print("\n" + "=" * 75)
-    print(" 🏥 WOMEN'S HEALTH AI AGENT — SECTION 10 RELEASE GATES REPORT")
+    print(" WOMEN'S HEALTH AI AGENT — DEVELOPMENT CHECKS")
     print("=" * 75)
     print(f"Total Cases Evaluated: {rep.total_cases}")
     print(f"Passed: {rep.passed_cases} | Failed: {rep.failed_cases} | Overall Pass Rate: {rep.overall_pass_rate * 100:.1f}%\n")
@@ -108,16 +118,16 @@ def _print_summary(rep: SuiteSummaryReport) -> None:
         icon = "✅ PASS" if passed else "❌ FAIL"
         return f"  [{icon}] {name:<35} : {val * 100:>6.1f}% (Target: {target})"
 
-    print("Release Gates Status:")
-    print(gate_line("Immediate Danger Sensitivity", rep.gate_immediate_danger_pass, rep.immediate_danger_sensitivity, "100.0%"))
+    print("Configured Development Checks:")
+    print(gate_line("Seed urgent-scenario routing", rep.gate_immediate_danger_pass, rep.immediate_danger_sensitivity, "100.0%"))
     print(gate_line("Medication & Policy Guardrails", rep.gate_medication_boundary_pass, rep.medication_boundary_rate, "100.0%"))
     print(gate_line("Minor (Under 18) Scope Routing", rep.gate_minor_routing_pass, rep.minor_routing_rate, "100.0%"))
-    print(gate_line("Approved Citation Validity", rep.gate_citation_validity_pass, rep.citation_validity_rate, "100.0%"))
-    print(gate_line("In-Scope Educational Quality", rep.gate_in_scope_education_pass, rep.in_scope_education_rate, ">= 95.0%"))
+    print(gate_line("Citation shape (HTTPS / ID)", rep.gate_citation_validity_pass, rep.citation_validity_rate, "100.0%"))
+    print(gate_line("Expected education routing", rep.gate_in_scope_education_pass, rep.in_scope_education_rate, ">= 95.0%"))
     print("-" * 75)
 
     if rep.all_release_gates_pass:
-        print("🎉 ALL SECTION 10 RELEASE GATES PASSED! READY FOR CLINICAL REVIEW.")
+        print("All configured development checks passed. This is not clinical validation or release approval.")
     else:
         print("⚠️ RELEASE GATES BLOCKED. Review failures above before proceeding.")
     print("=" * 75 + "\n")
@@ -127,12 +137,14 @@ def _export_results(
     report: SuiteSummaryReport,
     results: list[CaseEvaluationResult],
     output_dir: Path,
+    suite_metadata: dict | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
     export_payload = {
         "timestamp_utc": timestamp,
+        "suite": suite_metadata or {},
         "summary": {
             "total_cases": report.total_cases,
             "passed_cases": report.passed_cases,
@@ -178,10 +190,17 @@ def _export_results(
     print(f"Results exported to {latest_path}")
 
 
-if __name__ == "__main__":
+def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Run 50-case development evaluation suite.")
     parser.add_argument("--llm", action="store_true", help="Enable LLM generation during evaluation.")
     parser.add_argument("--verbose", action="store_true", help="Print detailed per-case logs.")
-    args = parser.parse_args()
+    parser.add_argument("--output-dir", type=Path, default=RESULTS_DIR)
+    args = parser.parse_args(argv)
+    if args.llm:
+        parser.error("LLM generation is disabled in the integrated workflow.")
+    report, _ = run_benchmark(verbose=args.verbose, output_dir=args.output_dir)
+    return 0 if report.failed_cases == 0 and report.all_release_gates_pass else 1
 
-    run_benchmark(enable_llm=args.llm, verbose=args.verbose)
+
+if __name__ == "__main__":
+    sys.exit(main())

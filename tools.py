@@ -20,9 +20,24 @@ from app.retrieval.exceptions import (
     ScopeViolationError,
     UrgentEscalationRequired,
 )
+from app.retrieval.filters import validate_educational_query_scope
 
-_retrieval_engine = HybridRetrievalEngine()
-_educational_search = GuardrailedEducationalSearch()
+_retrieval_engine = None
+_educational_search = None
+
+
+def _get_retrieval_engine():
+    global _retrieval_engine
+    if _retrieval_engine is None:
+        _retrieval_engine = HybridRetrievalEngine()
+    return _retrieval_engine
+
+
+def _get_educational_search():
+    global _educational_search
+    if _educational_search is None:
+        _educational_search = GuardrailedEducationalSearch()
+    return _educational_search
 
 
 @tool
@@ -32,7 +47,8 @@ def retrieve_approved_evidence_tool(query: str) -> str:
     Always call this tool first before using external educational search.
     """
     try:
-        bundle = _retrieval_engine.retrieve(query)
+        validate_educational_query_scope(query)
+        bundle = _get_retrieval_engine().retrieve(query)
         return bundle.format_for_prompt()
     except UrgentEscalationRequired as urgent:
         return f"[URGENT_PROTOCOL={urgent.protocol_id}] {urgent}"
@@ -40,6 +56,8 @@ def retrieve_approved_evidence_tool(query: str) -> str:
         return f"[SCOPE_POLICY_BLOCK] {violation}"
     except InsufficientEvidenceError as missing:
         return f"[INSUFFICIENT_APPROVED_EVIDENCE] {missing}"
+    except Exception:
+        return "[RETRIEVAL_UNAVAILABLE] Unable to retrieve evidence."
 
 
 @tool
@@ -51,13 +69,14 @@ def wiki_tool(query: str) -> str:
     Never use for medication dosages, prescriptions, or individual diagnosis.
     """
     try:
-        return _educational_search.search_wikipedia(query)
+        validate_educational_query_scope(query)
+        return _get_educational_search().search_wikipedia(query)
     except UrgentEscalationRequired as urgent:
         return f"[URGENT_PROTOCOL={urgent.protocol_id}] {urgent}"
     except ScopeViolationError as violation:
         return f"[SCOPE_POLICY_BLOCK] {violation}"
-    except Exception as exc:
-        return f"[WIKIPEDIA_UNAVAILABLE] Unable to retrieve educational overview: {exc}"
+    except Exception:
+        return "[WIKIPEDIA_UNAVAILABLE] Unable to retrieve educational overview."
 
 
 @tool
@@ -69,13 +88,14 @@ def search_tool(query: str) -> str:
     Never use for medication dosages, prescriptions, or individual diagnosis.
     """
     try:
-        return _educational_search.search_duckduckgo(query)
+        validate_educational_query_scope(query)
+        return _get_educational_search().search_duckduckgo(query)
     except UrgentEscalationRequired as urgent:
         return f"[URGENT_PROTOCOL={urgent.protocol_id}] {urgent}"
     except ScopeViolationError as violation:
         return f"[SCOPE_POLICY_BLOCK] {violation}"
-    except Exception as exc:
-        return f"[SEARCH_UNAVAILABLE] Unable to retrieve educational search results: {exc}"
+    except Exception:
+        return "[SEARCH_UNAVAILABLE] Unable to retrieve educational search results."
 
 
 EDUCATIONAL_TOOLS = [retrieve_approved_evidence_tool, wiki_tool, search_tool]
