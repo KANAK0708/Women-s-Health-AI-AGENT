@@ -16,6 +16,7 @@ from .handoff import ContextSnapshot, EvidenceSnapshot, adapt_retrieval, adapt_s
 from .pubmed import search_pubmed
 from .answer_selection import FACETS, question_focus, select_passages
 from .conversation import conversational_reply
+from .cycle_help import CYCLE_HELP, asks_how_calculator_works, medical_part_of_calculator_question
 
 
 @dataclass(frozen=True)
@@ -64,6 +65,8 @@ class WorkflowResult:
 def select_intent(query: str) -> str:
     """Small transparent router; not a clinical or safety classifier."""
     lowered = query.casefold()
+    if asks_how_calculator_works(query):
+        return "cycle_explanation"
     if re.search(r"\b(calculate|calculations?|compute|analyse|analyze|summarize|summary)\b", lowered) and re.search(r"\b(periods?|cycles?|dates?)\b", lowered):
         return "cycle_history"
     if re.search(r"\b(pubmed|research|studies|papers|systematic review)\b", lowered):
@@ -99,16 +102,19 @@ class Orchestrator:
         events = []
         outputs = []
         calls = 0
+        cycle_help = ""
         response = {
             "request_id": f"req-{uuid.uuid4().hex[:10]}", "response_type": "abstention",
             "disposition": "unable_to_assess", "topic": "PCOS and menstrual health",
             "what_it_is": "", "symptoms": [], "prevention_and_lifestyle": [],
             "answer": "", "claims": [], "questions": [], "next_steps": [],
             "limitations": [], "evidence": [], "protocol_id": None,
-            "system_version": "tools-orchestration-v0.3.2",
+            "system_version": "tools-orchestration-v0.3.3",
         }
 
         def finish(message, *, event, kind="abstention", disposition="unable_to_assess", question=False):
+            if cycle_help and cycle_help not in message:
+                message += "\n\n" + cycle_help
             response.update(answer=message, response_type=kind, disposition=disposition)
             events.append(event)
             return WorkflowResult(response, tuple(events), tuple(outputs), question)
@@ -165,6 +171,12 @@ class Orchestrator:
 
         intent = select_intent(query)
         events.append("INTENT_" + intent.upper())
+        if intent == "cycle_explanation":
+            cycle_help = CYCLE_HELP
+            medical_query = medical_part_of_calculator_question(query)
+            if medical_query is None:
+                return finish(CYCLE_HELP, event="CYCLE_EXPLAINED", kind="education", disposition="educational")
+            query = medical_query
         if intent == "cycle_history":
             if period_start_dates is None:
                 return clarify("Please provide confirmed period start dates from oldest to newest (YYYY-MM-DD), plus your local reference date.")
@@ -242,6 +254,8 @@ class Orchestrator:
                 return finish(f"I do not have a retrieved passage covering {labels} for this question.", event="FOCUSED_EVIDENCE_EMPTY")
             filtered = EvidenceSnapshot(evidence.manifest_version, tuple(item for _, item in selected))
             self._populate_evidence(response, filtered, selected, missing)
+            if cycle_help:
+                response["answer"] += "\n\n" + cycle_help
             events.append("ANSWER_FOCUSED")
         except Exception:
             return finish("Approved evidence could not be validated or retrieved. I cannot provide an evidence-based answer for this request.", event="RETRIEVAL_FAILED")

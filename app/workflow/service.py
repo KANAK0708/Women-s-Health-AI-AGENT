@@ -57,7 +57,7 @@ class HealthApplication:
             response_type="abstention" if unavailable else "clarification" if asking else "education",
             disposition="unable_to_assess" if unavailable else "educational",
             answer=transition.message, questions=[transition.message] if asking else [],
-            limitations=[], system_version="tools-orchestration-v0.3.2",
+            limitations=[], system_version="tools-orchestration-v0.3.3",
         ).model_dump(mode="json")
         # Task I/O has its own bounded turn count. It does not consume the two
         # medical-context clarification turns owned by ContextTracker.
@@ -112,7 +112,7 @@ class HealthApplication:
             result = self._task_response(transition)
             return replace(result, events=events + result.events), query, tool_inputs, ()
         if is_task_reply(query):
-            return self._task_response(TaskTransition("cancel", message="There is no pending cycle calculation. Start a new calculation before sending dates or confirmation.", event="NO_PENDING_TASK")), query, tool_inputs, ()
+            return self._task_response(TaskTransition("cancel", message="There is no pending cycle calculation; it may have expired or been cancelled. Start with 'calculate cycle intervals', then use YYYY-MM-DD dates and confirm them. No dates were used.", event="NO_PENDING_TASK")), query, tool_inputs, ()
         return None, query, tool_inputs, events
 
     def _verify_answer(self, result, bundles):
@@ -174,7 +174,7 @@ class HealthApplication:
             request_id="req-" + session.session_id.removeprefix("sess-"), topic="Session unavailable",
             response_type="abstention", disposition="unable_to_assess",
             answer="Session storage is unavailable. No stored context or pending dates were used; please retry later.",
-            system_version="tools-orchestration-v0.3.2",
+            system_version="tools-orchestration-v0.3.3",
         )
         if isinstance(query, str) and query.strip() and len(query) <= 4000:
             try:
