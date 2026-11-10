@@ -7,9 +7,10 @@ baseline, not independently clinically validated policies or source approvals.
 from dataclasses import replace
 from datetime import datetime, timezone
 
-from app.retrieval.exceptions import ScopeViolationError, UrgentEscalationRequired
+from app.retrieval.exceptions import InsufficientEvidenceError, ScopeViolationError, UrgentEscalationRequired
 from app.retrieval.filters import validate_educational_query_scope
-from app.schemas.evidence import EducationalCategory, EducationalResponse
+from app.retrieval.config import development_evidence_enabled
+from app.schemas.evidence import Disposition, EducationalCategory, EducationalResponse, ResponseType
 from app.schemas.memory import MinimalPatientContext
 from app.storage.consent import ConsentPolicy
 from app.storage.context_tracker import ContextTracker
@@ -26,7 +27,7 @@ from health_tools.workflow import Orchestrator, SafetyDecision, ToolPolicy, Work
 
 class HealthApplication:
     def __init__(self, *, store=None, retrieve=None, pubmed_search=None, policy=None, claim_verifier=None,
-                 pending_task_store: PendingTaskStore | None = None):
+                 pending_task_store: PendingTaskStore | None = None, allow_unverified_for_development=None):
         self.store = store if store is not None else get_session_store()
         self.policy = policy or ToolPolicy()
         self._retrieve_callback = retrieve
@@ -35,6 +36,7 @@ class HealthApplication:
         self._claim_verifier = claim_verifier
         self.pending_tasks = pending_task_store if pending_task_store is not None else InMemoryPendingTaskStore()
         self._pending_store_failed = False
+        self.allow_unverified_for_development = development_evidence_enabled(allow_unverified_for_development)
 
     def _drop_pending(self, session_id):
         try:
@@ -147,19 +149,50 @@ class HealthApplication:
     def _retrieve(self, query, **kwargs):
         if "category" in kwargs:
             kwargs["category"] = EducationalCategory(kwargs["category"])
+        kwargs.setdefault("allow_unverified_for_development", self.allow_unverified_for_development)
         if self._retrieve_callback is not None:
             return self._retrieve_callback(query, **kwargs)
-        import main
-        main_engine = getattr(main, "retrieval_engine", None)
-        if main_engine is not None and not isinstance(main_engine, type(None)):
-            return main_engine.retrieve(query, **kwargs)
         # Initialization is lazy: an urgent response must not depend on a working
         # manifest, embeddings, or network search client.
         if self._engine is None:
             from app.retrieval.pg_vector_engine import get_retrieval_engine
-            self._engine = get_retrieval_engine()
-        kwargs.setdefault("allow_unverified_for_development", True)
-        return self._engine.retrieve(query, **kwargs)
+            self._engine = get_retrieval_engine(allow_unverified_for_development=self.allow_unverified_for_development)
+        try:
+            return self._engine.retrieve(query, **kwargs)
+        except InsufficientEvidenceError:
+            from app.retrieval.engine import RetrievalBundle
+            return RetrievalBundle(query=query, manifest_version=getattr(self._engine, "manifest_version", "unknown"),
+                                   scored_passages=[], citations=[])
+
+    def _session_failure(self, query, *, now, session_id=None):
+        """Keep raw-message urgent routing available during a memory outage."""
+        if session_id:
+            self._drop_pending(session_id)
+        temporary_store = EphemeralSessionStore()
+        session = temporary_store.create_session(policy=ConsentPolicy(allow_minimal_session_context=False), now=now)
+        response = EducationalResponse(
+            request_id="req-" + session.session_id.removeprefix("sess-"), topic="Session unavailable",
+            response_type="abstention", disposition="unable_to_assess",
+            answer="Session storage is unavailable. No stored context or pending dates were used; please retry later.",
+            system_version="tools-orchestration-v0.3.2",
+        )
+        if isinstance(query, str) and query.strip() and len(query) <= 4000:
+            try:
+                validate_educational_query_scope(query)
+            except UrgentEscalationRequired as urgent:
+                response.response_type = ResponseType.URGENT_GUIDANCE
+                response.disposition = Disposition.EMERGENCY
+                response.answer = str(urgent)
+                response.protocol_id = urgent.protocol_id
+            except ScopeViolationError as scope:
+                response.response_type = ResponseType.OUT_OF_SCOPE
+                response.disposition = Disposition.ROUTINE_REVIEW
+                response.answer = str(scope)
+            except Exception:
+                pass  # Controlled abstention; no raw exception or tool call.
+        # Do not retain a parallel copy of history or write into the failed store.
+        temporary_store.delete_session(session.session_id)
+        return WorkflowResult(response.model_dump(mode="json"), ("SESSION_STORAGE_UNAVAILABLE",)), session
 
     def process(
         self, query, *, session_id=None, allow_session_context=None,
@@ -174,18 +207,21 @@ class HealthApplication:
         if allow_session_context is not None and type(allow_session_context) is not bool:
             raise ValueError("allow_session_context must be a boolean or None")
         current = now or datetime.now(timezone.utc)
-        session = self.store.get_session(session_id, now=current) if session_id else None
-        if session is None:
-            if session_id:
-                self._drop_pending(session_id)
-            policy = None if allow_session_context is None else ConsentPolicy(
-                allow_minimal_session_context=allow_session_context)
-            session = self.store.create_session(policy=policy, now=current)
-        elif allow_session_context is not None:
-            session.allow_session_context = allow_session_context
-            if not allow_session_context:
-                session.context = MinimalPatientContext()
-                self._drop_pending(session.session_id)
+        try:
+            session = self.store.get_session(session_id, now=current) if session_id else None
+            if session is None:
+                if session_id:
+                    self._drop_pending(session_id)
+                policy = None if allow_session_context is None else ConsentPolicy(
+                    allow_minimal_session_context=allow_session_context)
+                session = self.store.create_session(policy=policy, now=current)
+            elif allow_session_context is not None:
+                session.allow_session_context = allow_session_context
+                if not allow_session_context:
+                    session.context = MinimalPatientContext()
+                    self._drop_pending(session.session_id)
+        except Exception:
+            return self._session_failure(query, now=current, session_id=session_id)
 
         # Retention consent applies to saved history, not comprehension of the
         # current message. Never flip the actual stored consent flag to process it.
@@ -251,6 +287,8 @@ class HealthApplication:
         result.response["limitations"].append(
             "Development build: source-review metadata and safety rules have not been independently verified."
         )
+        if self.allow_unverified_for_development:
+            result.response["limitations"].append("Unverified development fixture evidence is enabled for software testing only.")
         # Validate exactly what will be rendered, before committing state.
         EducationalResponse.model_validate(result.response)
         if result.clarification_requested:
@@ -264,12 +302,15 @@ class HealthApplication:
             self.store.save_session(session, now=current)
         except Exception:
             self._drop_pending(session.session_id)
-            raise
+            return self._session_failure(query, now=current, session_id=session.session_id)
         return result, session
 
     def forget(self, session_id: str) -> bool:
         pending_deleted = self._drop_pending(session_id)
-        deleted = self.store.delete_session(session_id)
+        try:
+            deleted = self.store.delete_session(session_id)
+        except Exception:
+            raise RuntimeError("Session deletion could not be confirmed because storage is unavailable.") from None
         if not pending_deleted:
             raise RuntimeError("Session context was deleted, but pending-task deletion could not be confirmed.")
         return deleted

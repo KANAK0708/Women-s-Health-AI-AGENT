@@ -177,10 +177,11 @@ class TestClaimVerifier(unittest.TestCase):
         from unittest.mock import patch
         from app.retrieval.engine import HybridRetrievalEngine
         import main
+        from app.workflow.service import HealthApplication
 
         # Exercise verifier wiring only with explicitly marked development evidence.
         development_engine = HybridRetrievalEngine(allow_unverified_for_development=True)
-        with patch.object(main, "retrieval_engine", development_engine):
+        with patch.object(main, "application", HealthApplication(retrieve=development_engine.retrieve, allow_unverified_for_development=True)):
             response, session = process_health_query(
                 "What is PCOS and what are its symptoms?",
                 enable_llm_generation=False,

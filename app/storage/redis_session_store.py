@@ -2,7 +2,7 @@
 
 Implements Section 3, Section 8, and Section 9 of the Implementation Plan:
 - Enforces hardware-level automatic TTL expiration using Redis SETEX.
-- Provides immediate deletion cascades for GDPR/HIPAA compliance (DEL key).
+- Deletes session keys explicitly; this alone is not a compliance guarantee.
 - Stores only MinimalPatientContext and redacted audit codes (no durable raw health logs).
 - Falls back gracefully to EphemeralSessionStore if Redis connection fails or is unconfigured.
 """
@@ -15,7 +15,10 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-import redis
+try:
+    import redis
+except ImportError:
+    redis = None
 
 from app.schemas.memory import MinimalPatientContext, SessionMemory
 from app.storage.consent import CURRENT_CONSENT_VERSION, DEFAULT_SESSION_TTL_MINUTES, ConsentPolicy
@@ -35,18 +38,22 @@ class RedisSessionStore:
         self,
         redis_url: Optional[str] = None,
         default_ttl_minutes: int = DEFAULT_SESSION_TTL_MINUTES,
+        key_prefix: str = REDIS_SESSION_PREFIX,
     ) -> None:
         self.redis_url = redis_url or os.getenv(REDIS_URL_ENV, DEFAULT_REDIS_URL)
         self.default_ttl_minutes = default_ttl_minutes
-        self._client: redis.Redis = redis.from_url(
+        if not isinstance(key_prefix, str) or not key_prefix:
+            raise ValueError("Redis key prefix must be nonempty")
+        self.key_prefix = key_prefix
+        self._client = redis.from_url(
             self.redis_url,
             decode_responses=True,
             socket_connect_timeout=2.0,
             socket_timeout=2.0,
-        )
+        ) if redis is not None else None
 
     def _key(self, session_id: str) -> str:
-        return f"{REDIS_SESSION_PREFIX}{session_id}"
+        return f"{self.key_prefix}{session_id}"
 
     def ping(self) -> bool:
         """Check if Redis connection is active."""

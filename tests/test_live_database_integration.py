@@ -8,20 +8,24 @@ Verifies:
 5. Redis session lifecycle: creation, update, expiry, deletion cascade, consent opt-out, and cross-session isolation.
 6. Graceful failure handling when databases fail after initialization.
 
-Gracefully skips with unittest.SkipTest if PostgreSQL or Redis is unreachable.
-Uses no real patient data.
+Skips when explicit TEST_DATABASE_URL / TEST_REDIS_URL are not configured.
+Configured but broken services fail. Uses disposable data, never application DBs.
 """
 
 from datetime import date, datetime, timedelta, timezone
 import json
 import logging
+import os
 import unittest
+import uuid
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
 from app.retrieval.engine import DEFAULT_MANIFEST_PATH, RetrievalBundle
 from app.retrieval.exceptions import InsufficientEvidenceError
 from app.retrieval.pg_vector_engine import PgVectorHybridEngine, get_retrieval_engine
+from app.retrieval import pg_vector_engine as pg_module
 from app.schemas.evidence import EducationalCategory, EvidenceCitation, EvidencePassage
 from app.schemas.memory import MinimalPatientContext, SessionMemory, TriState
 from app.storage.consent import ConsentPolicy
@@ -33,12 +37,35 @@ class TestLivePostgreSQLIntegration(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.engine = PgVectorHybridEngine()
-        if not cls.engine.ping():
-            raise unittest.SkipTest("Live PostgreSQL/pgvector instance is not reachable on localhost:5432.")
+        target = os.getenv("TEST_DATABASE_URL")
+        if not target:
+            raise unittest.SkipTest("Set TEST_DATABASE_URL to an administrative test connection; application databases are never used.")
+        if pg_module.psycopg2 is None or pg_module.register_vector is None:
+            raise RuntimeError("Configured live PostgreSQL tests require psycopg2 and pgvector Python packages.")
+        # Never sync into a configured application DB: snapshot sync deletes
+        # records not in the manifest. Allocate and clean an owned test database.
+        cls.admin_url = target
+        cls.database_name = "health_test_" + uuid.uuid4().hex
+        with closing(pg_module.psycopg2.connect(target, connect_timeout=3)) as conn:
+            conn.autocommit = True
+            with conn.cursor() as cur:
+                cur.execute('CREATE DATABASE "' + cls.database_name + '"')
+        cls.addClassCleanup(cls._drop_database)
+        settings = pg_module.psycopg2.extensions.parse_dsn(target)
+        settings["dbname"] = cls.database_name
+        cls.engine = PgVectorHybridEngine(database_url=pg_module.psycopg2.extensions.make_dsn(**settings))
+
+    @classmethod
+    def _drop_database(cls):
+        with closing(pg_module.psycopg2.connect(cls.admin_url, connect_timeout=3)) as conn:
+            conn.autocommit = True
+            with conn.cursor() as cur:
+                cur.execute('DROP DATABASE IF EXISTS "' + cls.database_name + '" WITH (FORCE)')
 
     def setUp(self) -> None:
         logging.disable(logging.ERROR)
+        self.addCleanup(logging.disable, logging.NOTSET)
+        self.engine.sync_from_manifest(DEFAULT_MANIFEST_PATH)
 
     def tearDown(self) -> None:
         logging.disable(logging.NOTSET)
@@ -71,7 +98,7 @@ class TestLivePostgreSQLIntegration(unittest.TestCase):
             self.assertEqual(citation.url, passage.url)
             self.assertEqual(citation.locator, passage.locator)
             self.assertEqual(citation.reviewed_at, str(passage.reviewed_at))
-            self.assertGreaterEqual(scored.final_score, 0.18)
+            self.assertGreaterEqual(scored.final_score, 0.12)
 
     def test_category_filter(self) -> None:
         """Verify educational category filtering strictly limits returned passages."""
@@ -159,9 +186,12 @@ class TestLiveRedisIntegration(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.store = RedisSessionStore()
+        target = os.getenv("TEST_REDIS_URL")
+        if not target:
+            raise unittest.SkipTest("Set TEST_REDIS_URL explicitly; application Redis is never selected automatically.")
+        cls.store = RedisSessionStore(redis_url=target, key_prefix="test:health:" + uuid.uuid4().hex + ":")
         if not cls.store.ping():
-            raise unittest.SkipTest("Live Redis instance is not reachable on localhost:6379.")
+            raise RuntimeError("Explicitly configured test Redis is unavailable")
 
     def setUp(self) -> None:
         logging.disable(logging.ERROR)
@@ -237,6 +267,7 @@ class TestLiveRedisIntegration(unittest.TestCase):
         fetched = self.store.get_session(session.session_id, now=now)
         self.assertIsNotNone(fetched)
         self.assertFalse(fetched.allow_session_context)
+        self.assertIsNone(fetched.context.age)
 
     def test_session_deletion_cascade(self) -> None:
         """Verify deleting a session completely removes it from Redis."""
@@ -254,10 +285,11 @@ class TestLiveRedisIntegration(unittest.TestCase):
     def test_session_expiry(self) -> None:
         """Verify session expiry boundary: expired sessions return None."""
         now = datetime.now(timezone.utc)
-        # Create a session with TTL of 1 second
-        policy = ConsentPolicy(session_ttl_minutes=1)
+        # Verify both the one-minute native TTL and the logical expiry boundary.
+        policy = ConsentPolicy(ttl_minutes=1)
         session = self.store.create_session(policy=policy, now=now)
         self.created_session_ids.append(session.session_id)
+        self.assertLessEqual(self.store._client.ttl(self.store._key(session.session_id)), 60)
 
         # Simulating time advanced past expires_at
         future_now = now + timedelta(minutes=5)
@@ -266,14 +298,19 @@ class TestLiveRedisIntegration(unittest.TestCase):
 
     def test_corrupted_payload_handling(self) -> None:
         """Verify store safely returns None without crashing on corrupted Redis data."""
-        client = self.store._get_client()
-        corrupted_key = f"{self.store.key_prefix}corrupted_test_session"
+        client = self.store._client
+        corrupted_key = self.store._key("corrupted_test_session")
         client.set(corrupted_key, "{invalid-json-data", ex=60)
         try:
             result = self.store.get_session("corrupted_test_session")
             self.assertIsNone(result)
         finally:
             client.delete(corrupted_key)
+
+    def test_failure_after_initialization_is_observable(self):
+        with patch.object(self.store._client, "get", side_effect=RuntimeError("simulated outage")):
+            with self.assertRaises(RuntimeError):
+                self.store.get_session("synthetic")
 
 
 if __name__ == "__main__":

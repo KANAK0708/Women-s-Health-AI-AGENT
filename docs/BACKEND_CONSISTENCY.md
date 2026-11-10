@@ -48,18 +48,18 @@ While clinical eligibility rules are identical, the following differences are in
 | **Storage Medium** | Loaded in-memory from `manifest.json` on disk. | Relational tables in PostgreSQL with pgvector extension. | Local mode requires zero infrastructure for quick local testing; PostgreSQL supports multi-worker production scale. |
 | **Lexical Scoring** | BM25-inspired TF-IDF token matching with IDF penalization. | PostgreSQL Full-Text Search using `tsvector` and `ts_rank_cd`. | Utilizes native, indexed PostgreSQL full-text search capabilities for high throughput. |
 | **Vector Scoring** | L2-normalized MD5 n-gram hashed embeddings with NumPy cosine dot product. | pgvector cosine distance operator `<=>` evaluated in SQL: `1.0 - (embedding <=> query_vec)`. | Offloads vector similarity calculation directly to the PostgreSQL query planner. |
-| **Score Calibration** | Composite score formula: `0.55 * lexical + 0.35 * vector + 0.10 * intent_boost`. Default threshold: `0.14`. | Composite score formula: `0.60 * ts_rank_cd + 0.40 * vector`. Default threshold: `0.18`. | Calibrated specifically for PostgreSQL `ts_rank_cd` and pgvector distributions to cleanly reject unrelated queries while retaining high precision on clinical queries. |
+| **Score Calibration** | Composite score formula: `0.55 * lexical + 0.35 * vector + 0.10 * intent_boost`. Default threshold: `0.14`. | Composite score formula: `0.60 * ts_rank_cd + 0.40 * vector`. Default threshold: `0.12`. | Different scoring scales need separate evaluation; these defaults are engineering settings, not validated clinical thresholds. |
 | **Punctuation Handling**| Python regex tokenization (`re.findall(r"[a-z0-9]+")`). | Python regex tokenization converted into sanitized `to_tsquery` terms joined by `\|`. | Prevents PostgreSQL full-text syntax errors from special characters like `?`, `!`, `(`, `)`, `&`, `:`. |
 | **Session Concurrency**| Single-process in-memory dictionary. | Distributed Redis key-value store with native TTL expiration. | Redis provides cross-process session isolation, horizontal scalability, and automatic TTL eviction. |
-| **Failure Mode** | Returns in-memory results; raises on file absence. | Self-healing: auto-registers pgvector, and `get_retrieval_engine()` gracefully falls back to local engine if unreachable. | High availability: temporary database outages do not crash the agent. |
+| **Failure Mode** | Returns in-memory results; raises on file absence. | Self-healing: auto-registers pgvector, and `get_retrieval_engine()` gracefully falls back to local engine if unreachable. | Factories fall back at initialization. Runtime request failures are surfaced through controlled application fallbacks; existing sessions are not silently migrated. |
 
 ---
 
 ## 4. Evidence Provenance & Audit
 
-All evidence in `clinical/evidence_manifest/manifest.json` has been audited for honesty:
-* **Reviewer Identity**: Placeholder identifiers (e.g. `"clinician-lead-01"`) were replaced with `"pending-clinical-review"`.
-* **Content Hashes**: Each source contains a genuine `sha256:` digest computed from the text of its passages.
-* **Passage Text**: Described as development summaries pending clinical validation, not verbatim quotes.
-* **Reuse Rights**: Specified as educational summaries for development under fair dealing/fair use.
-* **System Version Notice**: All responses explicitly include the development build limitation.
+All checked-in sources are `unverified`. Hashes, rights, review dates, and
+publication metadata are not established by the existing summaries. The registry
+contains `UNVERIFIED` placeholders; no fair-use or reuse permission is asserted
+by this project. See `EVIDENCE_PROVENANCE_AUDIT.md` for the source-specific audit.
+Both backends now default to excluding this material. Explicit development flags
+permit fixture-only software demonstrations; they do not confer clinical approval.

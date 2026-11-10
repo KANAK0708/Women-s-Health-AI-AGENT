@@ -14,10 +14,6 @@ from health_tools.workflow import render_response
 application = HealthApplication()
 # Preserve these names for existing callers using the teammate's session store.
 session_store = application.store
-retrieval_engine = getattr(application, "_engine", None)
-if retrieval_engine is None:
-    from app.retrieval.pg_vector_engine import get_retrieval_engine
-    retrieval_engine = get_retrieval_engine()
 
 
 def process_health_query(
@@ -48,7 +44,9 @@ def main():
     parser.add_argument("--research-query", help="Research terms without personal identifiers")
     parser.add_argument("--jurisdiction", default="Global")
     parser.add_argument("--json", action="store_true", help="Print the structured EducationalResponse")
+    parser.add_argument("--development-evidence", action="store_true", help="Explicitly allow unverified fixtures for software testing only")
     args = parser.parse_args()
+    application.allow_unverified_for_development = args.development_evidence
     options = dict(
         allow_session_context=args.remember,
         period_start_dates=args.period_starts, as_of=args.as_of,
@@ -71,8 +69,12 @@ def main():
             if interactive and query == "/quit":
                 break
             if interactive and query == "/forget":
-                if session_id:
-                    application.forget(session_id)
+                try:
+                    if session_id:
+                        application.forget(session_id)
+                except RuntimeError:
+                    print("Session deletion could not be confirmed. Please retry when storage is available.")
+                    continue
                 session_id = None
                 print("Session context deleted.")
                 continue
@@ -90,7 +92,11 @@ def main():
                 break
     finally:
         if session_id:
-            application.forget(session_id)
+            try:
+                application.forget(session_id)
+            except RuntimeError:
+                import sys
+                print("Session deletion could not be confirmed because storage is unavailable.", file=sys.stderr)
 
 
 if __name__ == "__main__":

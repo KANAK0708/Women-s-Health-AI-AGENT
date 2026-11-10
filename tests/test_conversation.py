@@ -36,7 +36,7 @@ class ConversationTests(unittest.TestCase):
         retrieval.assert_not_called()
 
     def test_introduction_with_question_still_answers_question(self):
-        result, _ = HealthApplication().process("My name is Jay and I am 21 years old. What are PCOS symptoms?")
+        result, _ = HealthApplication(allow_unverified_for_development=True).process("My name is Jay and I am 21 years old. What are PCOS symptoms?")
         self.assertTrue(result.response["symptoms"])
         self.assertTrue(result.response["evidence"])
 
@@ -49,12 +49,12 @@ class ConversationTests(unittest.TestCase):
         app._retrieve_callback.assert_not_called()
 
     def test_opt_out_does_not_retain_age(self):
-        result, session = HealthApplication().process("my name is jay and i am 21 years old", allow_session_context=False)
+        result, session = HealthApplication(allow_unverified_for_development=True).process("my name is jay and i am 21 years old", allow_session_context=False)
         self.assertIn("introducing yourself", result.response["answer"])
         self.assertIsNone(session.context.age)
 
     def test_greeting_does_not_lose_pending_dates_or_treat_age_as_reference_date(self):
-        app = HealthApplication()
+        app = HealthApplication(allow_unverified_for_development=True)
         now = datetime(2026, 11, 7, 12, tzinfo=timezone.utc)
         _, session = app.process("Calculate cycle intervals", allow_session_context=True, now=now)
         _, session = app.process("2026-08-01, 2026-09-05; as of 2026-11-07", session_id=session.session_id, now=now)

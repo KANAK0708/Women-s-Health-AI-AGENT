@@ -193,6 +193,13 @@ class TestMemoryAndContextGovernance(unittest.TestCase):
 
 
 class TestEndToEndWorkflow(unittest.TestCase):
+    def setUp(self):
+        from unittest.mock import patch
+        from app.workflow.service import HealthApplication
+        self.application_patch = patch('main.application', HealthApplication(allow_unverified_for_development=True))
+        self.application_patch.start()
+        self.addCleanup(self.application_patch.stop)
+
     def test_educational_pcos_workflow(self) -> None:
         response, session = process_health_query(
             "What is PCOS, its symptoms, and how can I manage it with lifestyle habits?",

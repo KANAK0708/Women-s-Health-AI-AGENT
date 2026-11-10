@@ -11,15 +11,24 @@ Implements Section 3 and Section 6 of the Implementation Plan:
 import json
 import logging
 import os
+from contextlib import closing
 from datetime import date
 from pathlib import Path
 from typing import Any, Optional
 
-import psycopg2
-from pgvector.psycopg2 import register_vector
-from psycopg2.extras import RealDictCursor
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+except ImportError:
+    psycopg2 = None
+    RealDictCursor = None
+try:
+    from pgvector.psycopg2 import register_vector
+except ImportError:
+    register_vector = None
 
 from app.retrieval.engine import HybridRetrievalEngine, RetrievalBundle
+from app.retrieval.config import development_evidence_enabled
 from app.retrieval.exceptions import InsufficientEvidenceError
 from app.retrieval.filters import validate_educational_query_scope
 from app.retrieval.reranker import ScoredPassage, compute_hashed_embedding, topic_anchor_terms, tokenize
@@ -92,31 +101,40 @@ CREATE TABLE IF NOT EXISTS evidence_registry_meta (
 
 
 class PgVectorHybridEngine:
-    """Production-grade PostgreSQL + pgvector hybrid retrieval engine."""
+    """PostgreSQL retrieval adapter; operational and clinical review still apply."""
 
-    def __init__(self, database_url: Optional[str] = None) -> None:
+    def __init__(self, database_url: Optional[str] = None, *, allow_unverified_for_development=None) -> None:
         self.database_url = database_url or os.getenv(DATABASE_URL_ENV, DEFAULT_DATABASE_URL)
         self._schema_ready = False
+        self.allow_unverified_for_development = development_evidence_enabled(allow_unverified_for_development)
 
-    def _get_raw_connection(self) -> psycopg2.extensions.connection:
+    def _get_raw_connection(self):
+        if psycopg2 is None:
+            raise RuntimeError("PostgreSQL driver is not installed")
         return psycopg2.connect(self.database_url, connect_timeout=3)
 
-    def _get_connection(self) -> psycopg2.extensions.connection:
+    def _get_connection(self):
+        if register_vector is None:
+            raise RuntimeError("pgvector Python integration is not installed")
         conn = self._get_raw_connection()
         try:
-            register_vector(conn)
+            try:
+                register_vector(conn)
+            except Exception:
+                conn.rollback()
+                with conn.cursor() as cur:
+                    cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+                conn.commit()
+                register_vector(conn)
+            return conn
         except Exception:
-            # Self-healing: if extension was not yet registered, ensure it exists
-            with conn.cursor() as cur:
-                cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
-            conn.commit()
-            register_vector(conn)
-        return conn
+            conn.close()
+            raise
 
     def ping(self) -> bool:
         """Check if PostgreSQL database is reachable."""
         try:
-            with self._get_raw_connection() as conn:
+            with closing(self._get_raw_connection()) as conn:
                 with conn.cursor() as cur:
                     cur.execute("SELECT 1;")
                     return True
@@ -126,7 +144,7 @@ class PgVectorHybridEngine:
 
     def init_schema(self) -> None:
         """Create tables, indexes, and pgvector extension if they do not exist."""
-        with self._get_raw_connection() as conn:
+        with closing(self._get_raw_connection()) as conn:
             with conn.cursor() as cur:
                 cur.execute(SCHEMA_SQL)
             conn.commit()
@@ -155,7 +173,7 @@ class PgVectorHybridEngine:
             ):
                 raise ValueError("Approved sources require verified reviewer, rights, and content hash metadata")
 
-        with self._get_connection() as conn:
+        with closing(self._get_connection()) as conn:
             with conn.cursor() as cur:
                 # 1. Upsert Sources
                 for s in sources_data:
@@ -250,7 +268,7 @@ class PgVectorHybridEngine:
         reference_date: Optional[date] = None,
         max_excerpts: int = 6,
         min_score_threshold: float = 0.12,
-        allow_unverified_for_development: bool = False,
+        allow_unverified_for_development: Optional[bool] = None,
     ) -> RetrievalBundle:
         """Perform hybrid (tsvector + pgvector) search with clinical pre-filters."""
         cleaned_query = validate_educational_query_scope(query)
@@ -298,7 +316,7 @@ class PgVectorHybridEngine:
             "query_vec": query_vec,
             "ts_terms": ts_terms,
             "topic_terms": topic_terms,
-            "allow_unverified": allow_unverified_for_development,
+            "allow_unverified": self.allow_unverified_for_development if allow_unverified_for_development is None else development_evidence_enabled(allow_unverified_for_development),
             "today": today,
             "population": population,
             "jurisdiction": jurisdiction,
@@ -307,7 +325,7 @@ class PgVectorHybridEngine:
         if category:
             params["category"] = category.value
 
-        with self._get_connection() as conn:
+        with closing(self._get_connection()) as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(sql, params)
                 rows = cur.fetchall()
@@ -365,18 +383,22 @@ def get_retrieval_engine(
     *,
     force_in_memory: bool = False,
     database_url: Optional[str] = None,
-    allow_unverified_for_development: bool = True,
+    allow_unverified_for_development: Optional[bool] = None,
 ) -> PgVectorHybridEngine | HybridRetrievalEngine:
     """Factory returning PgVectorHybridEngine if PostgreSQL is configured and reachable;
     otherwise gracefully falls back to local manifest HybridRetrievalEngine.
     """
+    allow_unverified_for_development = development_evidence_enabled(allow_unverified_for_development)
     if force_in_memory:
         return HybridRetrievalEngine(allow_unverified_for_development=allow_unverified_for_development)
 
     target_url = database_url or os.getenv(DATABASE_URL_ENV)
+    if target_url and (psycopg2 is None or register_vector is None):
+        logger.warning("Optional PostgreSQL integrations are unavailable; using local retrieval")
+        return HybridRetrievalEngine(allow_unverified_for_development=allow_unverified_for_development)
     if target_url:
         try:
-            engine = PgVectorHybridEngine(database_url=target_url)
+            engine = PgVectorHybridEngine(database_url=target_url, allow_unverified_for_development=allow_unverified_for_development)
             if engine.ping():
                 return engine
             logger.warning("PostgreSQL unreachable; using local retrieval eligibility rules")

@@ -16,7 +16,7 @@ class UpstreamIntegrationTests(unittest.TestCase):
         self.response_model = EducationalResponse
         # Software compatibility fixture only, not a medical policy.
         self.workflow = create_upstream_orchestrator(
-            safety_check=lambda query, context: SafetyDecision("proceed")
+            safety_check=lambda query, context: SafetyDecision("proceed"), allow_unverified_for_development=True
         )
 
     def test_real_session_model(self):
