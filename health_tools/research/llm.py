@@ -28,7 +28,8 @@ class StructuredLLM(Protocol):
     def ask(self, schema: type[T], system: str, user: str) -> T: ...
 
 
-QUOTA_COOLDOWN_SECONDS = 300
+QUOTA_COOLDOWN_SECONDS = 60   # free-tier limits are mostly per minute
+MAX_QUOTA_WAIT_SECONDS = 90  # wait at most this long when every model is cooling down
 _cooldown_until: dict[str, float] = {}  # model label -> monotonic time it may be retried
 
 
@@ -62,6 +63,27 @@ class LangChainStructuredLLM:
 
     def ask(self, schema, system, user):
         import time
+
+        from . import cache
+        key = cache.make_key(self.name, schema.__name__, schema.model_json_schema(), system, user)
+        if (hit := cache.get("llm", key, cache.LLM_TTL)) is not None:
+            try:
+                return schema.model_validate(hit)
+            except ValueError:
+                pass  # Schema changed shape; ask again.
+        result = self._ask_models(schema, system, user)
+        cache.put("llm", key, result.model_dump(mode="json"))
+        return result
+
+    def _ask_models(self, schema, system, user):
+        import time
+
+        # If every model is cooling down after a rate limit, wait for the first one to
+        # come back instead of failing at once (limits reset within about a minute).
+        soonest = min(_cooldown_until.get(label, 0) for _, label, _ in self.models)
+        wait = soonest - time.monotonic()
+        if 0 < wait <= MAX_QUOTA_WAIT_SECONDS:
+            time.sleep(wait)
         errors = []
         for model, label, max_chars in self.models:
             if _cooldown_until.get(label, 0) > time.monotonic():

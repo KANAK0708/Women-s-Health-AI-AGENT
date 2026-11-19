@@ -18,6 +18,7 @@ from .schema import (
     ClaimChecks, Conflict, DraftReport, ExtractedFacts, Finding, RefinedSearch, ResearchPlan,
     ResearchReport, Source, SubAnswer, SubQuestion,
 )
+from .privacy import redact
 from .sources import DEFAULT_SEARCHES, lookup_study_type
 from .verify import (
     check_sentences, cites_other_work, claim_supported, keep_cited_sentences, near_duplicate, normalize, quote_in_document,
@@ -110,6 +111,9 @@ class State(TypedDict, total=False):
     rejections: dict
     search_log: list[str]
     report: ResearchReport
+    progress: Any
+    safe_question: str
+    redactions: list
 
 
 def scrub_terms(terms: str) -> str:
@@ -137,9 +141,10 @@ class ResearchAgent:
 
     # ---- public -------------------------------------------------------------
 
-    def run(self, question: str) -> ResearchReport:
+    def run(self, question: str, progress=None) -> ResearchReport:
+        """Research one question. `progress`, if given, is called with short status messages."""
         state = self.graph.invoke({
-            "question": question, "round": 1, "queries": [], "candidates": [], "read": [],
+            "progress": progress, "question": question, "round": 1, "queries": [], "candidates": [], "read": [],
             "new_docs": [], "verified": [], "rejected": 0, "rejections": {}, "search_log": [],
         })
         report = state["report"]
@@ -164,6 +169,15 @@ class ResearchAgent:
         graph.add_edge("report", END)
         return graph.compile()
 
+    @staticmethod
+    def _emit(state, message: str) -> None:
+        callback = state.get("progress")
+        if callback is not None:
+            try:
+                callback(message)
+            except Exception:
+                pass  # A broken progress display must never break research.
+
     def _stop(self, state, status, message, protocol_id=None):
         return {"report": ResearchReport(question=state["question"], status=status, summary=message,
                                          protocol_id=protocol_id, search_log=state.get("search_log", []))}
@@ -178,19 +192,27 @@ class ResearchAgent:
             return self._stop(state, "urgent", str(urgent), urgent.protocol_id)
         except ScopeViolationError as violation:
             return self._stop(state, "blocked", str(violation))
-        return {}
+        # Safety ran on the original text locally; external services only see this version.
+        safe_question, removed = redact(question)
+        log = list(state["search_log"])
+        if removed:
+            log.append("removed personal details before external calls: " + ", ".join(removed))
+            self._emit(state, "Removed personal details before searching: " + ", ".join(removed))
+        return {"safe_question": safe_question, "redactions": removed, "search_log": log}
 
     def _plan(self, state):
         try:
-            plan = self.fast.ask(ResearchPlan, PLAN_PROMPT, f"Question: {state['question']}")
-        except Exception:
+            plan = self.fast.ask(ResearchPlan, PLAN_PROMPT, f"Question: {state['safe_question']}")
+        except Exception as exc:
+            state = {**state, "search_log": state["search_log"] + [f"planner failed: {type(exc).__name__}: {str(exc)[:200]}"]}
             return self._stop(state, "error", "The research planner is unavailable. Please try again later.")
         if not plan.in_scope:
             return self._stop(state, "out_of_scope", plan.reason or "This research mode only covers women's health topics.")
         subs = [SubQuestion(question=s.question.strip(), search_terms=scrub_terms(s.search_terms))
                 for s in plan.sub_questions[:MAX_SUB_QUESTIONS] if s.question.strip()]
         subs = [s for s in subs if s.search_terms] or [
-            SubQuestion(question=state["question"], search_terms=scrub_terms(state["question"]))]
+            SubQuestion(question=state["safe_question"], search_terms=scrub_terms(state["safe_question"]))]
+        self._emit(state, f"Planned {len(subs)} sub-question(s): " + "; ".join(s.question for s in subs))
         return {"sub_questions": subs, "queries": list(dict.fromkeys(s.search_terms for s in subs))}
 
     def _search(self, state):
@@ -206,6 +228,8 @@ class ResearchAgent:
                 return name, terms, [], str(exc)[:160] or type(exc).__name__
 
         candidates = list(state["candidates"])
+        before = len(candidates)
+        self._emit(state, f"Round {state['round']}: searching {len(self.searches)} sources for {len(state['queries'])} topic(s)")
         with ThreadPoolExecutor(WORKERS) as pool:
             for name, terms, docs, error in pool.map(run, jobs):
                 fresh = [d for d in docs if d.url not in known]
@@ -213,6 +237,7 @@ class ResearchAgent:
                 candidates.extend(fresh)
                 outcome = f"ERROR {error}" if error else f"{len(fresh)} new"
                 log.append(f"round {state['round']} | {name} | '{terms}' -> {outcome}")
+        self._emit(state, f"Found {len(candidates) - before} new document(s)")
         return {"candidates": candidates, "search_log": log}
 
     def _read(self, state):
@@ -264,8 +289,10 @@ class ResearchAgent:
                 return None, "read failed"
 
         new_docs = []
+        self._emit(state, f"Reading {len(chosen)} document(s), strongest evidence first")
         with ThreadPoolExecutor(WORKERS) as pool:
-            for doc, (loaded, error) in zip(chosen, pool.map(load, chosen)):
+            for number, (doc, (loaded, error)) in enumerate(zip(chosen, pool.map(load, chosen)), 1):
+                self._emit(state, f"Read {number}/{len(chosen)}: {(doc.title or doc.url)[:70]}")
                 if loaded is None:
                     log.append(f"skipped {doc.url}: {error}")
                 else:
@@ -290,6 +317,7 @@ class ResearchAgent:
         with ThreadPoolExecutor(WORKERS) as pool:
             results = list(pool.map(extract, state["new_docs"]))
         pairs = []
+        self._emit(state, f"Extracted facts from {len(results)} document(s)")
         for doc, facts, error in results:
             log.append(f"extraction failed for {doc.url}: {error}" if error
                        else f"extracted {len(facts)} facts from {doc.url} ({len(doc.text)} chars, {doc.source_type})")
@@ -328,6 +356,7 @@ class ResearchAgent:
 
         # Meaning check: word overlap cannot see a dropped qualifier or an added detail.
         log = list(state["search_log"])
+        self._emit(state, f"{len(newly)} quote(s) verified word for word; checking each claim's meaning")
         faithful, outcomes = self._check_meaning(newly, log)
         for outcome, count in outcomes.items():
             if outcome.startswith("rejected: "):
@@ -385,6 +414,7 @@ class ResearchAgent:
         return "report"
 
     def _refine(self, state):
+        self._emit(state, f"Searching again for {len(self._gaps(state))} unanswered sub-question(s)")
         queries = []
         for index in self._gaps(state):
             sub = state["sub_questions"][index]
@@ -414,7 +444,7 @@ class ResearchAgent:
         items = items[:MAX_FINDINGS]
         gaps = [subs[i].question for i in range(len(subs))
                 if i not in {it["fact"].sub_question_index for it in items}]
-        base = dict(question=state["question"], gaps=gaps, search_log=state["search_log"],
+        base = dict(question=state["question"], redactions=state.get("redactions", []), gaps=gaps, search_log=state["search_log"],
                     rejected_findings=rejected, rejection_reasons=reasons)
         if not items:
             return {"report": ResearchReport(
@@ -435,7 +465,7 @@ class ResearchAgent:
             for f, it in zip(findings, items))
         sub_listing = "\n".join(f"{i}. {s.question}" for i, s in enumerate(subs))
 
-        request = f"Question: {state['question']}\nSub-questions:\n{sub_listing}\n\nFindings:\n{listing}"
+        request = f"Question: {state['safe_question']}\nSub-questions:\n{sub_listing}\n\nFindings:\n{listing}"
         log = list(base["search_log"])
 
         def write(extra=""):
@@ -457,6 +487,7 @@ class ResearchAgent:
         def total(found):
             return sum(len(x) for x in found)
 
+        self._emit(state, f"Writing the report from {len(findings)} verified finding(s)")
         draft = write()
         if draft is not None and total(found := problems(draft)):
             # One repair pass: show the writer exactly what failed and why.
@@ -481,6 +512,7 @@ class ResearchAgent:
                 draft = retry
         draft = draft or DraftReport(summary="")
 
+        self._emit(state, "Fact-checking the report against its findings")
         summary, _, dropped = check_sentences(draft.summary, valid, references)
         if draft.summary:
             log.append(f"summary fact-check removed {len(dropped)} sentence(s)")
@@ -516,11 +548,11 @@ class ResearchAgent:
             key_findings=findings, conflicts=conflicts, sources=sources, **base)}
 
 
-def research(question: str, **kwargs) -> ResearchReport:
+def research(question: str, progress=None, **kwargs) -> ResearchReport:
     """Convenience entry point using Groq/Gemini keys from the environment."""
     from .llm import build_llms
     fast, long = build_llms()
-    return ResearchAgent(fast, long, **kwargs).run(question)
+    return ResearchAgent(fast, long, **kwargs).run(question, progress=progress)
 
 
 def render_report(report: ResearchReport) -> str:

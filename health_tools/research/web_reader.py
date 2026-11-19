@@ -15,11 +15,16 @@ from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 from urllib.robotparser import RobotFileParser
 
+from dataclasses import asdict
+
+from . import cache
 from .allowlist import host_of, is_allowed, source_type_for
 from .schema import Document
 
 USER_AGENT = "WomensHealthResearchAgent/0.1 (educational research; respects robots.txt)"
 MAX_BYTES = 3_000_000
+MAX_PDF_BYTES = 20_000_000
+MAX_PDF_PAGES = 60
 MAX_TEXT_CHARS = 60_000
 MIN_HOST_INTERVAL = 1.0
 EUROPEPMC_FULLTEXT = "https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid}/fullTextXML"
@@ -53,18 +58,19 @@ def _throttle(host: str) -> None:
 
 def _get(url: str, timeout: float) -> tuple[bytes, str]:
     _throttle(host_of(url))
-    request = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8"})
+    request = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,application/pdf;q=0.8,text/plain;q=0.8"})
     try:
         with _opener.open(request, timeout=timeout) as response:
             if not is_allowed(response.geturl()):
                 raise ReaderError("Final URL is outside the allowed domains.")
             content_type = response.headers.get("Content-Type", "")
-            body = response.read(MAX_BYTES + 1)
+            limit = MAX_PDF_BYTES if "pdf" in content_type.lower() else MAX_BYTES
+            body = response.read(limit + 1)
     except HTTPError as exc:
         raise ReaderError(f"HTTP {exc.code}") from None
     except (URLError, TimeoutError, OSError) as exc:
         raise ReaderError("Network error or timeout") from exc
-    if len(body) > MAX_BYTES:
+    if len(body) > (MAX_PDF_BYTES if "pdf" in content_type.lower() else MAX_BYTES):
         raise ReaderError("Page too large.")
     return body, content_type
 
@@ -144,28 +150,68 @@ def extract_text(html: str) -> tuple[str, str]:
     return " ".join(parser.title.split()), main if len(main) >= 500 else body
 
 
+def extract_pdf_text(body: bytes) -> tuple[str, str, int]:
+    """Return (title, text, pages read) from a PDF; many guidelines are only published as PDFs."""
+    try:
+        import logging
+        from io import BytesIO
+
+        from pypdf import PdfReader
+        logging.getLogger("pypdf").setLevel(logging.ERROR)  # malformed-PDF chatter; failures raise below
+    except ImportError:
+        raise ReaderError("PDF support needs the pypdf package.") from None
+    try:
+        reader = PdfReader(BytesIO(body))
+        if reader.is_encrypted and not reader.decrypt(""):
+            raise ReaderError("PDF is encrypted.")
+        pages = reader.pages[:MAX_PDF_PAGES]
+        raw = "\n".join(page.extract_text() or "" for page in pages)
+        title = ((reader.metadata or {}).get("/Title") or "").strip() if reader.metadata else ""
+    except ReaderError:
+        raise
+    except Exception:
+        raise ReaderError("PDF could not be read.") from None
+    raw = re.sub(r"(\w)-\n(\w)", r"\1\2", raw)  # re-join words hyphenated across line breaks
+    text = _tidy(raw)
+    if not title:
+        title = next((line for line in text.splitlines() if len(line) > 10), "")[:200]
+    return title, text, len(pages)
+
+
 def fetch_page(url: str, *, timeout: float = 10, doc_id: str | None = None) -> Document:
     """Read one allowlisted page and return its exact text."""
     if not is_allowed(url):
         raise ReaderError("URL is outside the allowed domains.")
     if url in _cache:
         return _cache[url]
+    key = cache.make_key("page", url)
+    if (hit := cache.get("pages", key, cache.PAGE_TTL)) is not None:
+        doc = Document(**hit)
+        if doc_id:
+            doc.doc_id = doc_id
+        _cache[url] = doc
+        return doc
     if not robots_allows(url):
         raise ReaderError("robots.txt disallows this page.")
     body, content_type = _get(url, timeout)
-    if "pdf" in content_type.lower():
-        raise ReaderError("PDF pages are not read yet.")
-    if content_type and not re.search(r"html|xml|text/plain", content_type, re.I):
+    is_pdf = "pdf" in content_type.lower() or body[:5] == b"%PDF-"
+    if is_pdf:
+        title, text, pages = extract_pdf_text(body)
+        locator = f"PDF text, pages 1-{pages}"
+    elif content_type and not re.search(r"html|xml|text/plain", content_type, re.I):
         raise ReaderError("Unsupported content type.")
-    title, text = extract_text(body.decode("utf-8", "replace"))
+    else:
+        title, text = extract_text(body.decode("utf-8", "replace"))
+        locator = "Web page text"
     if len(text) < 200:
         raise ReaderError("Page had too little readable text.")
     doc = Document(
         doc_id=doc_id or f"web:{host_of(url)}", url=url, title=title or url,
         publisher=host_of(url), source_type=source_type_for(url), text=text,
-        locator="Web page text",
+        locator=locator,
     )
     _cache[url] = doc
+    cache.put("pages", key, asdict(doc))
     return doc
 
 
@@ -173,6 +219,9 @@ def fetch_europepmc_fulltext(pmcid: str, *, timeout: float = 30) -> str:
     """Return open-access full text for a PMC ID (body sections), or raise ReaderError."""
     if not re.fullmatch(r"PMC\d{1,10}", pmcid or ""):
         raise ReaderError("Invalid PMCID.")
+    key = cache.make_key("fulltext", pmcid)
+    if (hit := cache.get("fulltext", key, cache.PAGE_TTL)) is not None:
+        return hit
     body, _ = _get(EUROPEPMC_FULLTEXT.format(pmcid=pmcid), timeout)
     try:
         root = ET.fromstring(body)
@@ -188,4 +237,5 @@ def fetch_europepmc_fulltext(pmcid: str, *, timeout: float = 30) -> str:
     text = _tidy("\n".join(parts))
     if len(text) < 500:
         raise ReaderError("No usable full text.")
+    cache.put("fulltext", key, text)
     return text

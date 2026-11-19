@@ -557,10 +557,26 @@
     }
 
     async function research(text) {
-      const m = addThinking('Researching: planning, searching and verifying sources (30–90s)');
+      const m = addThinking('Researching: planning the search');
+      const label = m.querySelector('.shimmer');
+      const started = Date.now();
       try {
         const res = await fetch('/api/research', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: text, consent: true }) });
-        const data = await res.json();
+        let data = await res.json();
+        if (data.job_id) {
+          // Poll for progress: the agent reports each step (plan, search, read, verify, write).
+          const jobId = data.job_id;
+          while (true) {
+            await new Promise(r => setTimeout(r, 1500));
+            const poll = await fetch('/api/research/' + jobId);
+            data = await poll.json();
+            const events = data.events || [];
+            const secs = Math.round((Date.now() - started) / 1000);
+            if (label && events.length) label.textContent = events[events.length - 1] + ' · step ' + events.length + ' · ' + secs + 's…';
+            scrollDown();
+            if (data.done || data.error || !poll.ok) break;
+          }
+        }
         const r = data.report;
         fillBot(m, data.rendered || data.error || 'No result.', r ? [
           'RESEARCH_' + String(r.status).toUpperCase(),
@@ -602,7 +618,7 @@
       deep = on;
       $('researchBtn').setAttribute('aria-pressed', on);
       $('query').placeholder = on ? 'Ask a research question…' : "Ask about women's health…";
-      $('fine').textContent = on ? 'Deep research sends your question to external services. Leave out personal details.' : 'Enter to send · Shift+Enter for a new line';
+      $('fine').textContent = on ? 'Deep research sends your question to Groq and Google Gemini, and search terms to PubMed, Europe PMC, MedlinePlus and DuckDuckGo. Dates, first-person ages, names, places and contact details are removed first, but please leave out personal details.' : 'Enter to send · Shift+Enter for a new line';
     }
 
     function autosize() {

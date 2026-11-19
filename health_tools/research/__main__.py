@@ -15,9 +15,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("question")
     parser.add_argument("--json", action="store_true", help="Print the structured ResearchReport JSON")
+    parser.add_argument("--quiet", action="store_true", help="Do not print progress to stderr")
     args = parser.parse_args()
     try:
-        report = research(args.question)
+        progress = None if args.quiet else (lambda message: print(f"... {message}", file=sys.stderr, flush=True))
+        report = research(args.question, progress=progress)
     except ResearchLLMUnavailable as exc:
         sys.exit(str(exc))
     print(report.model_dump_json(indent=2) if args.json else render_report(report))

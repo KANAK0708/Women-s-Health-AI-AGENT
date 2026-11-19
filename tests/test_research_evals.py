@@ -1,3 +1,7 @@
+import os
+
+os.environ["RESEARCH_CACHE"] = "off"  # tests must never read or write the real cache
+
 import json
 import tempfile
 import unittest

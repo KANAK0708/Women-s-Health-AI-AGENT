@@ -45,7 +45,17 @@ def quote_in_document(quote: str, document_text: str) -> bool:
     if not segments or sum(len(s) for s in segments) < MIN_QUOTE_CHARS:
         return False
     haystack = normalize(document_text)
-    return all(segment in haystack for segment in segments)
+    if all(segment in haystack for segment in segments):
+        return True
+    # PDF text breaks hyphens and spacing at line ends ("terms-and-\nconditions" ->
+    # "terms-andconditions"). Fall back to comparing letters and digits only: the same
+    # characters must still appear in the same order.
+    compact = _alnum(haystack)
+    return all(_alnum(segment) in compact for segment in segments)
+
+
+def _alnum(text: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", text)
 
 
 def _stems(text: str) -> set[str]:

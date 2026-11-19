@@ -155,6 +155,7 @@ class ResearchReport(BaseModel):
     rejected_findings: int = 0
     rejection_reasons: dict[str, int] = Field(default_factory=dict)
     protocol_id: str | None = None
+    redactions: list[str] = Field(default_factory=list)  # kinds of personal detail removed before external calls
     models: dict[str, str] = Field(default_factory=dict)
     generated_at: str = Field(default_factory=lambda: datetime.now().astimezone().isoformat())
     disclaimer: str = DISCLAIMER

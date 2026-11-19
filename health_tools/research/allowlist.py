@@ -4,6 +4,7 @@ Only HTTPS pages on these hosts (or their subdomains) are fetched. Search result
 pointing anywhere else are discarded before any request is made.
 """
 
+import re
 from urllib.parse import urlsplit
 
 # domain -> source_type used for evidence ranking
@@ -57,6 +58,20 @@ def is_allowed(url: str) -> bool:
     return matched_domain(url) is not None
 
 
+# Pages that are formal guidance documents, not news, FAQs or fact sheets.
+_GUIDELINE_PATHS = {
+    "nice.org.uk": re.compile(r"^www\.nice\.org\.uk/guidance/", re.I),
+    "acog.org": re.compile(r"/clinical/(?:clinical-)?guidance/|practice-bulletin|committee-opinion|clinical-practice-guideline", re.I),
+    "rcog.org.uk": re.compile(r"/guidance/|green-top", re.I),
+    "who.int": re.compile(r"/publications/(?:i|m)/item/|/iris/", re.I),
+}
+
+
 def source_type_for(url: str) -> str:
     domain = matched_domain(url)
-    return ALLOWED_DOMAINS[domain] if domain else "web"
+    if not domain:
+        return "web"
+    pattern = _GUIDELINE_PATHS.get(domain)
+    if pattern and pattern.search(url.split("://", 1)[-1]):
+        return "guideline"
+    return ALLOWED_DOMAINS[domain]

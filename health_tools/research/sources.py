@@ -11,6 +11,9 @@ from health_tools.europepmc import search_europepmc
 from health_tools.medlineplus import search_medlineplus
 from health_tools.pubmed import search_pubmed
 
+from dataclasses import asdict
+
+from . import cache
 from .allowlist import is_allowed, source_type_for
 from .schema import Document
 
@@ -162,18 +165,26 @@ def medlineplus_documents(terms: str, *, search=search_medlineplus, max_results:
     ]
 
 
-def web_documents(terms: str, *, max_results: int = 25, keep: int = 4) -> list[Document]:
-    """DuckDuckGo search; only allowlisted HTTPS links are kept (as links to read later)."""
+_NON_ENGLISH_PATH = re.compile(r"^/(?:fr|es|ar|zh|ru|pt|de|it)(?:/|-|$)", re.I)
+_SKIP_URL_PARTS = ("/imemrf/",)  # WHO regional journal index pages, not guidance
+
+GUIDELINE_SITES = ("who.int", "nice.org.uk", "acog.org", "rcog.org.uk", "cdc.gov")
+
+
+def _ddg_hits(queries: list[str], max_results: int) -> list[dict]:
+    """Run DuckDuckGo queries in order until one returns hits.
+
+    "No results found" is an empty result, not a failure; other errors get one
+    spaced-out retry. Searches run one at a time: parallel queries trigger rate limits.
+    """
     try:
         from ddgs import DDGS
     except ImportError:
         return []
     hits, last_error = None, None
-    # Try the topic-anchored query first, then the plain terms. "No results found" is an
-    # empty result, not a failure; other errors get one spaced-out retry.
-    attempts = [f"{terms} women's health", terms, terms]
+    attempts = list(queries) + [queries[-1]]
     for attempt, query in enumerate(attempts):
-        with _WEB_LOCK:  # one search at a time: parallel queries trigger rate limits
+        with _WEB_LOCK:
             try:
                 hits = DDGS(timeout=15).text(query, max_results=max_results) or []
                 last_error = None
@@ -182,15 +193,25 @@ def web_documents(terms: str, *, max_results: int = 25, keep: int = 4) -> list[D
             time.sleep(1.0)
         if hits:
             break
-        if last_error is not None and "no results" not in str(last_error).casefold() and attempt < 2:
+        if last_error is not None and "no results" not in str(last_error).casefold() and attempt < len(attempts) - 1:
             time.sleep(2.0)
     if hits is None and last_error is not None and "no results" not in str(last_error).casefold():
         raise SearchError(f"web search failed after retry: {type(last_error).__name__}: {str(last_error)[:80]}")
-    hits = hits or []
+    return hits or []
+
+
+def _usable_url(url: str) -> bool:
+    if not url or not is_allowed(url) or any(part in url for part in _SKIP_URL_PARTS):
+        return False
+    path = "/" + url.split("/", 3)[3] if url.count("/") >= 3 else "/"
+    return not _NON_ENGLISH_PATH.match(path)
+
+
+def _hits_to_documents(hits: list[dict], keep: int) -> list[Document]:
     docs, seen = [], set()
     for hit in hits:
         url = (hit.get("href") or hit.get("url") or "").split("#")[0]
-        if not url or url in seen or not is_allowed(url):
+        if url in seen or not _usable_url(url):
             continue
         seen.add(url)
         if pmc := _PMC_URL.match(url):
@@ -200,22 +221,45 @@ def web_documents(terms: str, *, max_results: int = 25, keep: int = 4) -> list[D
                 source_type="research_article", text="", locator="Europe PMC open-access full text",
                 pmcid=pmc.group(1),
             ))
-            if len(docs) >= keep:
-                break
-            continue
-        docs.append(Document(
-            doc_id=f"web:{len(docs)}", url=url, title=hit.get("title") or url,
-            publisher=url.split("/")[2], source_type=source_type_for(url),
-            text=hit.get("body") or "", locator="Web page text", needs_fetch=True,
-        ))
+        else:
+            docs.append(Document(
+                doc_id=f"web:{len(docs)}", url=url, title=hit.get("title") or url,
+                publisher=url.split("/")[2], source_type=source_type_for(url),
+                text=hit.get("body") or "", locator="Web page text", needs_fetch=True,
+            ))
         if len(docs) >= keep:
             break
     return docs
 
 
+def web_documents(terms: str, *, max_results: int = 25, keep: int = 4) -> list[Document]:
+    """DuckDuckGo search; only allowlisted HTTPS links are kept (as links to read later)."""
+    return _hits_to_documents(_ddg_hits([f"{terms} women's health", terms], max_results), keep)
+
+
+def guideline_documents(terms: str, *, max_results: int = 15, keep: int = 3) -> list[Document]:
+    """Search the main guideline bodies directly; general searches mostly return papers."""
+    sites = " OR ".join(f"site:{site}" for site in GUIDELINE_SITES)
+    return _hits_to_documents(_ddg_hits([f"{terms} guideline ({sites})", f"{terms} ({sites})"], max_results), keep)
+
+
+def cached(name: str, search: SearchFn) -> SearchFn:
+    """Reuse recent non-empty results for the same source and terms."""
+    def run(terms: str) -> list[Document]:
+        key = cache.make_key("search", name, terms.casefold().strip())
+        if (hit := cache.get("search", key, cache.SEARCH_TTL)) is not None:
+            return [Document(**d) for d in hit]
+        docs = search(terms)
+        if docs:
+            cache.put("search", key, [asdict(d) for d in docs])
+        return docs
+    return run
+
+
 DEFAULT_SEARCHES: dict[str, SearchFn] = {
-    "pubmed": pubmed_documents,
-    "europepmc": europepmc_documents,
-    "medlineplus": medlineplus_documents,
-    "web": web_documents,
+    "pubmed": cached("pubmed", pubmed_documents),
+    "europepmc": cached("europepmc", europepmc_documents),
+    "medlineplus": cached("medlineplus", medlineplus_documents),
+    "web": cached("web", web_documents),
+    "guidelines": cached("guidelines", guideline_documents),
 }

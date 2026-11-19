@@ -6,6 +6,9 @@ to serve a local testing dashboard at http://127.0.0.1:8000.
 
 import argparse
 import json
+import threading
+import time
+import uuid
 import webbrowser
 from pathlib import Path
 from http import HTTPStatus
@@ -32,6 +35,38 @@ def _research_agent() -> ResearchAgent:
     return _agent
 
 
+_jobs: dict[str, dict] = {}
+_jobs_lock = threading.Lock()
+JOB_TTL_SECONDS = 3600
+
+
+def _start_research_job(question: str) -> str:
+    """Run research in a background thread; the page polls /api/research/<id> for progress."""
+    agent = _research_agent()  # Raises ResearchLLMUnavailable before a job is created.
+    job_id = uuid.uuid4().hex
+    job = {"events": [], "done": False, "created": time.monotonic()}
+    with _jobs_lock:
+        for old_id in [k for k, v in _jobs.items() if time.monotonic() - v["created"] > JOB_TTL_SECONDS]:
+            del _jobs[old_id]
+        _jobs[job_id] = job
+
+    def progress(message):
+        with _jobs_lock:
+            job["events"].append(message)
+
+    def work():
+        try:
+            report = agent.run(question, progress=progress)
+            result = {"report": report.model_dump(mode="json"), "rendered": render_report(report)}
+        except Exception:
+            result = {"error": "Research failed unexpectedly. Please try again."}
+        with _jobs_lock:
+            job.update(result, done=True)
+
+    threading.Thread(target=work, daemon=True).start()
+    return job_id
+
+
 class WebUIHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         return  # Keep terminal output clean
@@ -53,6 +88,18 @@ class WebUIHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+            return
+
+        if parsed.path.startswith("/api/research/"):
+            with _jobs_lock:
+                job = _jobs.get(parsed.path.rsplit("/", 1)[-1])
+                payload = None if job is None else {k: v for k, v in job.items() if k != "created"}
+                if payload is not None:
+                    payload["events"] = list(payload["events"])
+            if payload is None:
+                self._send_json({"error": "Unknown or expired research job."}, status=HTTPStatus.NOT_FOUND)
+            else:
+                self._send_json(payload)
             return
 
         if parsed.path == "/api/query":
@@ -91,15 +138,11 @@ class WebUIHandler(BaseHTTPRequestHandler):
                                 status=HTTPStatus.BAD_REQUEST)
                 return
             try:
-                report = _research_agent().run(str(data.get("question", "")))
+                job_id = _start_research_job(str(data.get("question", "")))
             except ResearchLLMUnavailable as exc:
                 self._send_json({"error": str(exc)}, status=HTTPStatus.SERVICE_UNAVAILABLE)
                 return
-            except Exception:
-                self._send_json({"error": "Research failed unexpectedly. Please try again."},
-                                status=HTTPStatus.INTERNAL_SERVER_ERROR)
-                return
-            self._send_json({"report": report.model_dump(mode="json"), "rendered": render_report(report)})
+            self._send_json({"job_id": job_id}, status=HTTPStatus.ACCEPTED)
             return
 
         if self.path == "/api/query":
