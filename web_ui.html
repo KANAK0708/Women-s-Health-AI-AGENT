@@ -28,7 +28,7 @@
       --shadow: 0 1px 2px rgba(31,30,29,.04), 0 6px 24px rgba(31,30,29,.07);
     }
     @media (prefers-color-scheme: dark) {
-      :root {
+      :root:not([data-research-demo-theme="light"]) {
         --bg: #262624; --sidebar: #1f1e1d; --surface: #30302e; --surface-2: #3a3936;
         --border: #3b3935; --border-strong: #4d4a44; --text: #ece9df; --text-2: #cfcbbf; --muted: #9b978b;
         --accent: #d97757; --accent-ink: #1f1e1d; --accent-soft: rgba(217,119,87,.14);
@@ -142,6 +142,51 @@
     .actions button:hover { background: var(--surface-2); color: var(--text); }
     .actions .sp { color: var(--accent); margin-left: auto; font-size: .95rem; }
     pre.json { background: var(--code-bg); color: var(--code-text); border-radius: 12px; padding: 14px; font-family: var(--mono); font-size: .76rem; line-height: 1.6; overflow: auto; max-height: 420px; margin: 10px 0 0; white-space: pre-wrap; word-break: break-word; }
+
+    /* Structured research reports; all content uses the page's light/dark palette. */
+    .research-card { min-width: 0; padding: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; overflow-wrap: anywhere; }
+    .research-card .eyebrow { font: 600 .73rem/1.5 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
+    .research-card h3 { margin-top: 22px; }
+    .research-card h4 { font: 600 .95rem/1.5 var(--sans); margin: 0 0 8px; }
+    .research-card .research-summary { font-size: 1.13rem; }
+    .research-text > p { white-space: pre-wrap; }
+    .research-card a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+    .research-card a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .research-cite { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; min-height: 28px; padding: 2px 7px; margin: 0 2px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--accent-soft); color: var(--accent); font: 600 .75rem/1.2 var(--sans); vertical-align: baseline; }
+    .research-cite:hover, .research-cite[aria-expanded="true"] { border-color: var(--accent); background: var(--surface-2); }
+    .citation-preview { border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; background: var(--surface-2); padding: 14px; margin: 8px 0 16px; font: .87rem/1.6 var(--sans); }
+    .citation-preview blockquote { margin: 10px 0; white-space: pre-wrap; font-family: var(--serif); font-size: 1rem; }
+    .citation-preview .quote-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-top: 10px; }
+    .citation-preview .close-quote { display: block; margin-top: 12px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; padding: 4px 10px; font-size: .8rem; }
+    .evidence-badge { display: inline-block; border: 1px solid currentColor; border-radius: 6px; padding: 1px 7px; font: 600 .7rem/1.6 var(--sans); white-space: normal; }
+    .evidence-badge.strong { color: var(--ok); }
+    .evidence-badge.moderate { color: var(--warn); }
+    .evidence-badge.limited { color: var(--muted); }
+    .evidence-legend { font: .76rem/1.6 var(--sans); color: var(--text-2); padding: 12px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 20px 0; }
+    .evidence-legend p { margin: 5px 0; }
+    .evidence-note { color: var(--muted); font: .78rem/1.6 var(--sans); }
+    .research-callout { border: 1px solid var(--border-strong); background: var(--surface-2); border-radius: 10px; padding: 14px; font: .9rem/1.6 var(--sans); margin: 16px 0; }
+    .research-callout p:last-child, .research-callout ul { margin-bottom: 0; }
+    .research-card.urgent { border: 2px solid var(--danger); }
+    .research-card.urgent .eyebrow { color: var(--danger); }
+    .research-card .callout { display: block; }
+    .research-sources { padding-left: 22px; font: .87rem/1.6 var(--sans); }
+    .research-sources li { padding: 8px 0 12px 4px; }
+    .source-meta { font: .78rem/1.6 var(--sans); color: var(--text-2); margin: 5px 0; }
+    .research-details { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 18px; font: .87rem/1.6 var(--sans); }
+    .research-details > summary { cursor: pointer; padding: 5px 0; color: var(--text-2); font-weight: 600; }
+    .research-details > div { margin-top: 12px; }
+    .research-findings { padding-left: 22px; }
+    .research-findings > li { padding: 10px 0; }
+    .research-log { max-height: 200px; overflow: auto; background: var(--code-bg); color: var(--code-text); padding: 12px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; font: .73rem/1.6 var(--mono); }
+    .research-disclaimer { margin: 20px 0 0 !important; padding-top: 14px; border-top: 1px solid var(--border); color: var(--text-2); font: .79rem/1.6 var(--sans); }
+    .demo-banner { background: var(--accent-soft); border: 1px solid var(--border-strong); border-radius: 10px; padding: 12px; margin-bottom: 20px; font-size: .85rem; }
+    .demo-banner select { font: inherit; max-width: 100%; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: 6px; padding: 5px; margin: 8px 0 0; }
+    @media (max-width: 480px) {
+      .research-card { padding: 16px 14px; border-radius: 14px; }
+      .research-card .research-summary { font-size: 1.06rem; }
+      .research-cite { min-height: 32px; }
+    }
 
     .thinking { display: flex; align-items: center; gap: 12px; color: var(--muted); font-family: var(--sans); font-size: .93rem; }
     .spark-spin { color: var(--accent); font-size: 1.15rem; animation: spin 2.4s linear infinite; display: inline-block; }
@@ -498,9 +543,242 @@
       }
     }
 
-    function fillBot(m, text, events, json) {
+    function safeHttpUrl(value) {
+      if (typeof value !== 'string') return null;
+      try {
+        const url = new URL(value);
+        return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url.href : null;
+      } catch (_) { return null; }
+    }
+
+    function sourceLink(parent, title, value) {
+      const url = safeHttpUrl(value);
+      const node = el(url ? 'a' : 'span', null, title);
+      if (url) { node.href = url; node.target = '_blank'; node.rel = 'noopener noreferrer'; }
+      parent.appendChild(node);
+      return node;
+    }
+
+    function evidenceBadge(type) {
+      const tier = ['guideline', 'official_guidance', 'systematic_review'].includes(type) ? 'Strong'
+        : ['professional_society', 'rct', 'narrative_review'].includes(type) ? 'Moderate' : 'Limited';
+      return el('span', 'evidence-badge ' + tier.toLowerCase(), tier + ' evidence');
+    }
+
+    function publicationYear(value) {
+      const match = String(value || '').match(/\b(?:19|20)\d{2}\b/);
+      return match ? match[0] : 'Year not supplied';
+    }
+
+    let researchRenderId = 0;
+
+    // Every value below is external data: insert text nodes only, never HTML.
+    function renderResearchReport(body, report) {
+      const card = el('article', 'answer research-card');
+      const status = String(report.status || 'error');
+      const findings = Array.isArray(report.key_findings) ? report.key_findings : [];
+      const sources = Array.isArray(report.sources) ? report.sources : [];
+      const byFinding = new Map(findings.map(f => [f.id, f]));
+      const bySource = new Map(sources.map(s => [s.source_id, s]));
+      const prefix = 'research-' + (++researchRenderId) + '-';
+      let citationId = 0;
+      let activeCitation = null;
+      const disclaimer = report.disclaimer || 'Educational research summary built from the cited sources only. It is not a diagnosis or treatment plan; discuss your situation with a qualified clinician.';
+
+      function closeCitation() {
+        if (!activeCitation) return;
+        clearTimeout(activeCitation.timer);
+        activeCitation.panel.hidden = true;
+        activeCitation.button.setAttribute('aria-expanded', 'false');
+        activeCitation = null;
+      }
+
+      function citedText(parent, text, extraIds = []) {
+        const wrap = el('div', 'research-text');
+        const p = el('p');
+        const panels = [];
+        const cited = new Set();
+        function citation(id) {
+          const finding = byFinding.get(id);
+          if (!finding) { p.appendChild(document.createTextNode('[' + id + ']')); return; }
+          cited.add(id);
+          const source = bySource.get(finding.source_id) || {};
+          const button = el('button', 'research-cite', id);
+          button.type = 'button';
+          button.setAttribute('aria-label', 'Show quote and source for finding ' + id);
+          button.setAttribute('aria-expanded', 'false');
+          const panel = el('div', 'citation-preview');
+          panel.id = prefix + 'quote-' + (++citationId);
+          panel.hidden = true;
+          panel.setAttribute('role', 'region');
+          panel.setAttribute('aria-label', 'Quote and source for finding ' + id);
+          button.setAttribute('aria-controls', panel.id);
+          panel.appendChild(el('strong', null, source.title || 'Source title not supplied'));
+          panel.appendChild(el('div', 'source-meta', (source.publisher || 'Publisher not supplied') + ' · ' + publicationYear(source.published || finding.published)));
+          panel.appendChild(evidenceBadge(finding.source_type));
+          panel.appendChild(el('div', 'quote-label', 'Exact source quote · ' + id));
+          panel.appendChild(el('blockquote', null, finding.quote || 'No quote supplied.'));
+          sourceLink(panel, 'Open source ↗', source.url || finding.source_url);
+          const close = el('button', 'close-quote', 'Close quote');
+          close.type = 'button';
+          close.onclick = () => { closeCitation(); button.focus(); };
+          panel.appendChild(close);
+          const state = {button, panel, pinned: false, timer: null};
+          function show(pinned = false) {
+            if (activeCitation !== state) closeCitation();
+            activeCitation = state;
+            clearTimeout(state.timer);
+            state.pinned = pinned;
+            panel.hidden = false;
+            button.setAttribute('aria-expanded', 'true');
+          }
+          function leave() {
+            if (!state.pinned) state.timer = setTimeout(() => {
+              if (activeCitation === state && !state.pinned && !wrap.contains(document.activeElement)) closeCitation();
+            }, 250);
+          }
+          button.onclick = () => activeCitation === state && state.pinned ? closeCitation() : show(true);
+          button.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') show(state.pinned); });
+          button.addEventListener('pointerleave', leave);
+          panel.addEventListener('pointerenter', () => clearTimeout(state.timer));
+          panel.addEventListener('pointerleave', leave);
+          function escape(e) {
+            if (e.key === 'Escape' && activeCitation === state) { e.preventDefault(); closeCitation(); button.focus(); }
+          }
+          button.addEventListener('keydown', escape);
+          panel.addEventListener('keydown', escape);
+          p.appendChild(button);
+          panels.push(panel);
+        }
+        String(text || '').split(/(\[F\d+\])/g).forEach(part => {
+          if (/^\[F\d+\]$/.test(part)) citation(part.slice(1, -1));
+          else if (part) p.appendChild(document.createTextNode(part));
+        });
+        extraIds.filter(id => !cited.has(id)).forEach(citation);
+        wrap.append(p, ...panels);
+        parent.appendChild(wrap);
+      }
+
+      function disclosure(title) {
+        const details = el('details', 'research-details');
+        const summary = el('summary', null, title);
+        summary.setAttribute('aria-expanded', 'false');
+        details.addEventListener('toggle', () => {
+          summary.setAttribute('aria-expanded', String(details.open));
+          if (!details.open) closeCitation();
+        });
+        const content = el('div');
+        details.append(summary, content);
+        card.appendChild(details);
+        return content;
+      }
+
+      const statusLabels = {complete: 'Research summary', partial: 'Partial research summary', urgent: 'Seek urgent care',
+        blocked: 'Research unavailable for this question', out_of_scope: 'Outside research scope',
+        no_evidence: 'No verified evidence found', error: 'Research unavailable'};
+      card.appendChild(el('p', 'eyebrow', statusLabels[status] || 'Research unavailable'));
+      if (status === 'urgent') {
+        card.classList.add('urgent');
+        const urgent = el('div', 'callout');
+        urgent.setAttribute('role', 'alert');
+        urgent.append(el('b', null, 'Seek urgent medical care'), el('p', null, report.summary));
+        card.appendChild(urgent);
+      } else if (!['complete', 'partial'].includes(status)) {
+        card.appendChild(el('p', null, report.summary || 'Research could not produce an answer.'));
+      } else {
+        const overview = el('div', 'research-summary');
+        citedText(overview, report.summary);
+        card.appendChild(overview);
+        if (status === 'partial') {
+          card.appendChild(el('div', 'research-callout', 'Some sub-questions were not answered by the sources read. See the gaps below.'));
+        }
+        (report.sub_answers || []).forEach(answer => {
+          const section = el('section');
+          section.appendChild(el('h3', null, answer.question));
+          citedText(section, answer.answer, answer.finding_ids || []);
+          card.appendChild(section);
+        });
+
+        if ((report.conflicts || []).length) {
+          const box = el('section', 'research-callout');
+          box.appendChild(el('h4', null, 'Sources disagree'));
+          report.conflicts.forEach(conflict => citedText(box, conflict.description, conflict.finding_ids || []));
+          card.appendChild(box);
+        }
+        if ((report.gaps || []).length) {
+          const box = el('section', 'research-callout');
+          box.appendChild(el('h4', null, 'Not answered by the sources read'));
+          const list = el('ul');
+          report.gaps.forEach(gap => list.appendChild(el('li', null, gap)));
+          box.appendChild(list);
+          card.appendChild(box);
+        }
+
+        const legend = el('section', 'evidence-legend');
+        legend.appendChild(el('h4', null, 'Evidence strength'));
+        [['guideline', 'Guidelines, official guidance, systematic reviews.'],
+         ['rct', 'Professional societies, randomized trials, narrative reviews.'],
+         ['research_article', 'Research articles, consumer health, other web pages.']].forEach(([kind, description]) => {
+          const line = el('p');
+          line.append(evidenceBadge(kind), document.createTextNode(' ' + description));
+          legend.appendChild(line);
+        });
+        legend.appendChild(el('p', 'evidence-note', 'Labels describe source type, not a clinical approval or a guarantee of quality. Select a citation to read its exact quote.'));
+        card.appendChild(legend);
+
+        if (sources.length) {
+          const section = el('section');
+          section.appendChild(el('h3', null, 'Sources'));
+          const list = el('ol', 'research-sources');
+          sources.forEach(source => {
+            const item = el('li');
+            sourceLink(item, source.title || 'Untitled source', source.url);
+            item.appendChild(el('div', 'source-meta', (source.publisher || 'Publisher not supplied') + ' · ' + publicationYear(source.published)));
+            item.appendChild(evidenceBadge(source.source_type));
+            list.appendChild(item);
+          });
+          section.appendChild(list);
+          card.appendChild(section);
+        }
+        if (findings.length) {
+          const content = disclosure('All findings (' + findings.length + ')');
+          const list = el('ol', 'research-findings');
+          findings.forEach(finding => {
+            const item = el('li');
+            item.appendChild(evidenceBadge(finding.source_type));
+            citedText(item, finding.claim, [finding.id]);
+            list.appendChild(item);
+          });
+          content.appendChild(list);
+        }
+        const checks = disclosure('How this was verified');
+        checks.appendChild(el('p', null, 'In research runs, every retained quote is checked word for word against the source text read, with formatting normalization. These checks do not establish clinical accuracy.'));
+        checks.appendChild(el('p', null, 'Findings kept: ' + findings.length + ' · Findings rejected: ' + (report.rejected_findings || 0)));
+        const reasons = Object.entries(report.rejection_reasons || {});
+        if (reasons.length) {
+          const list = el('ul');
+          reasons.forEach(([reason, count]) => list.appendChild(el('li', null, reason + ': ' + count)));
+          checks.appendChild(list);
+        }
+        checks.appendChild(el('p', null, (report.redactions || []).length
+          ? 'Personal details removed before external calls: ' + report.redactions.join(', ') + '.'
+          : 'No personal details were identified for removal by the redaction checks.'));
+        checks.appendChild(el('p', null, 'Models used: ' + (Object.entries(report.models || {}).map(([role, model]) => role.replace(/_/g, ' ') + ': ' + model).join('; ') || 'Not supplied')));
+        checks.appendChild(el('p', null, 'Generated: ' + (report.generated_at || 'Not supplied')));
+        checks.appendChild(el('h4', null, 'Search log'));
+        const log = el('pre', 'research-log', (report.search_log || []).join('\n') || 'No search log supplied.');
+        log.tabIndex = 0;
+        log.setAttribute('aria-label', 'Research search log');
+        checks.appendChild(log);
+      }
+      card.appendChild(el('p', 'research-disclaimer', disclaimer));
+      body.appendChild(card);
+    }
+
+    function fillBot(m, text, events, json, structuredReport = null) {
       m.replaceChildren();
-      renderAnswer(m, text, events);
+      if (structuredReport) renderResearchReport(m, structuredReport);
+      else renderAnswer(m, text, events);
       if (events && events.length) {
         const c = el('div', 'checks');
         events.forEach(ev => c.appendChild(el('span', 'chip ' + chipClass(ev), prettyEvent(ev))));
@@ -587,7 +865,7 @@
           'RESEARCH_' + String(r.status).toUpperCase(),
           (r.key_findings || []).length + ' verified findings',
           (r.sources || []).length + ' sources',
-          r.rejected_findings + ' rejected'] : ['RESEARCH_UNAVAILABLE'], r || null);
+          r.rejected_findings + ' rejected'] : ['RESEARCH_UNAVAILABLE'], r || null, r || null);
       } catch (e) {
         fillBot(m, 'Research request failed.', ['RESEARCH_UNAVAILABLE']);
       }
@@ -662,6 +940,46 @@
     $('menuBtn').addEventListener('click', () => document.body.classList.toggle('nav'));
     $('scroll').addEventListener('click', () => document.body.classList.remove('nav'));
     document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => usePreset(b.dataset.preset)));
+
+    // Explicit local demo URL; the server returns 404 unless WEB_UI_DEMO=1.
+    async function showResearchDemo(status) {
+      try {
+        const res = await fetch('/api/research/demo?status=' + encodeURIComponent(status));
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.report) return;
+        if (new URLSearchParams(location.search).get('research_demo_theme') === 'light') {
+          document.documentElement.dataset.researchDemoTheme = 'light';
+        }
+        setEmpty(false);
+        $('hero').hidden = true;
+        const banner = el('div', 'demo-banner', 'Display demo · synthetic fixtures, not medical evidence.');
+        const label = el('label', null, 'Fixture status: ');
+        const select = el('select');
+        ['complete', 'partial', 'urgent', 'blocked', 'out_of_scope', 'no_evidence', 'error'].forEach(value => {
+          const option = el('option', null, value.replace(/_/g, ' ')); option.value = value;
+          select.appendChild(option);
+        });
+        select.value = status;
+        label.appendChild(select); banner.append(el('br'), label);
+        const m = el('div', 'msg bot');
+        function display(payload) {
+          fillBot(m, payload.rendered || '', payload.events, payload.report, payload.report);
+          $('scroll').scrollTop = 0;
+        }
+        select.onchange = async () => {
+          select.disabled = true;
+          try {
+            const response = await fetch('/api/research/demo?status=' + encodeURIComponent(select.value));
+            if (response.ok) display(await response.json());
+          } finally { select.disabled = false; }
+        };
+        $('thread').append(banner, m);
+        display(data);
+      } catch (_) { /* Demo access must not disrupt normal chat. */ }
+    }
+    const demoStatus = new URLSearchParams(location.search).get('research_demo');
+    if (demoStatus) showResearchDemo(demoStatus);
   </script>
 </body>
 </html>

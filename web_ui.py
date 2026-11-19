@@ -6,6 +6,7 @@ to serve a local testing dashboard at http://127.0.0.1:8000.
 
 import argparse
 import json
+import os
 import threading
 import time
 import uuid
@@ -88,6 +89,23 @@ class WebUIHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+            return
+
+        if parsed.path == "/api/research/demo":
+            # Synthetic local fixtures only: never initialize a model or start a job.
+            if os.environ.get("WEB_UI_DEMO") != "1":
+                self._send_json({"error": "Not found"}, status=HTTPStatus.NOT_FOUND)
+                return
+            from dev.research_demo import demo_report
+
+            status = parse_qs(parsed.query).get("status", ["complete"])[0]
+            try:
+                report = demo_report(status)
+            except ValueError:
+                self._send_json({"error": "Unknown demo status."}, status=HTTPStatus.BAD_REQUEST)
+                return
+            self._send_json({"done": True, "events": ["Synthetic display fixture; not medical evidence."],
+                             "report": report.model_dump(mode="json"), "rendered": render_report(report)})
             return
 
         if parsed.path.startswith("/api/research/"):
