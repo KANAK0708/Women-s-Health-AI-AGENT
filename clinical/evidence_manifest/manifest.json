@@ -1,5 +1,5 @@
 {
-  "manifest_version": "2026.11.07-unverified",
+  "manifest_version": "2026.11.12-unverified",
   "sources": [
     {
       "source_id": "src-monash-pcos-2023",
@@ -109,7 +109,7 @@
       "evidence_grade": null,
       "reviewer_id": "pending-clinical-review",
       "license": "ACOG educational guidance summary for development; pending clinical verification",
-      "content_hash": "sha256:3cd86a052c86c7d832988b290c6f55760da7e32a7b76c7891dcac029a2856e71",
+      "content_hash": "sha256:4308f08c341b41fed29e60510fe3d2f18c7049debeedccaeedad9f0c5d8b74f7",
       "is_superseded": false,
       "approval_status": "unverified"
     },
@@ -131,7 +131,7 @@
       "evidence_grade": null,
       "reviewer_id": "pending-clinical-review",
       "license": "U.S. Government public domain summary for development; pending clinical verification",
-      "content_hash": "sha256:e6fbd613ef6154ba514858d2f08a43410e533e7d9958c59dc992150aeb93a42b",
+      "content_hash": "sha256:e14a80ab96bb82db822522056c1ef7054480a02b529280e52c1d9b5521ae3987",
       "is_superseded": false,
       "approval_status": "unverified"
     },
@@ -153,7 +153,73 @@
       "evidence_grade": null,
       "reviewer_id": "pending-clinical-review",
       "license": "WHO public information summary for development; pending clinical verification",
-      "content_hash": "sha256:72bd90d15047e7e085f3f9ee1807269af28dbced57ce63281348cd5797d01944",
+      "content_hash": "sha256:e2e213ae882f113aedc1bdaccd99fddb187b974e2e326147bd086b886b5dfc69",
+      "is_superseded": false,
+      "approval_status": "unverified"
+    },
+    {
+      "source_id": "src-acog-pms-2024",
+      "publisher": "American College of Obstetricians and Gynecologists (ACOG)",
+      "title": "ACOG Clinical Practice Guideline: Management of Premenstrual Syndrome (PMS) and Premenstrual Dysphoric Disorder (PMDD)",
+      "canonical_url": "https://www.acog.org/clinical/clinical-guidance/clinical-practice-guideline/articles/2023/12/management-of-premenstrual-disorders",
+      "publication_date": "2024-01-10",
+      "update_date": null,
+      "ingestion_date": "2026-11-12",
+      "review_date": "2026-11-12",
+      "expiry_date": "2027-11-12",
+      "jurisdiction": "Global",
+      "population": "adults_18+",
+      "life_stage": [
+        "menstrual_health"
+      ],
+      "evidence_grade": null,
+      "reviewer_id": "pending-clinical-review",
+      "license": "ACOG educational guidance summary for development; pending clinical verification",
+      "content_hash": "sha256:d8c1c65a7213d4acad75adf2e95b0519ad14dd83db75c5937b103e3a9de2977a",
+      "is_superseded": false,
+      "approval_status": "unverified"
+    },
+    {
+      "source_id": "src-nichd-fibroids-2024",
+      "publisher": "NIH Eunice Kennedy Shriver National Institute of Child Health and Human Development",
+      "title": "Uterine Fibroids (Leiomyomas): Overview, Symptoms, Evaluation, and Supportive Care",
+      "canonical_url": "https://www.nichd.nih.gov/health/topics/uterine",
+      "publication_date": "2024-06-15",
+      "update_date": null,
+      "ingestion_date": "2026-11-12",
+      "review_date": "2026-11-12",
+      "expiry_date": "2027-11-12",
+      "jurisdiction": "Global",
+      "population": "adults_18+",
+      "life_stage": [
+        "menstrual_health"
+      ],
+      "evidence_grade": null,
+      "reviewer_id": "pending-clinical-review",
+      "license": "U.S. Government public domain summary for development; pending clinical verification",
+      "content_hash": "sha256:c1030573e7f735fdf01a01a2e1e157116c260aa6f86af04aec3795373d6fdf38",
+      "is_superseded": false,
+      "approval_status": "unverified"
+    },
+    {
+      "source_id": "src-who-menopause-2024",
+      "publisher": "World Health Organization (WHO)",
+      "title": "WHO Fact Sheet: Menopause and Perimenopausal Transition Health",
+      "canonical_url": "https://www.who.int/news-room/fact-sheets/detail/menopause",
+      "publication_date": "2024-10-18",
+      "update_date": null,
+      "ingestion_date": "2026-11-12",
+      "review_date": "2026-11-12",
+      "expiry_date": "2027-11-12",
+      "jurisdiction": "Global",
+      "population": "adults_18+",
+      "life_stage": [
+        "menstrual_health"
+      ],
+      "evidence_grade": null,
+      "reviewer_id": "pending-clinical-review",
+      "license": "WHO public information summary for development; pending clinical verification",
+      "content_hash": "sha256:4d7c8ce8b3435db676c0c15f80517fc3176b216446dccaee50bbd74235d3d964",
       "is_superseded": false,
       "approval_status": "unverified"
     }
@@ -491,6 +557,424 @@
       ],
       "text": "While there is currently no known primary prevention or permanent cure for endometriosis, supportive non-pharmacological care significantly improves quality of life. Helpful lifestyle habits include consuming a nutrient-dense, anti-inflammatory eating pattern rich in omega-3 fatty acids, colorful vegetables, and antioxidant-rich berries; engaging in gentle, low-impact exercise (such as yoga, walking, and gentle stretching); working with a specialized pelvic floor physical therapist; practicing relaxation and mindfulness techniques to down-regulate centralized pain sensitivity; and using thermal heat therapy during flare-ups.",
       "reviewed_at": "2026-11-06"
+    },
+    {
+      "passage_id": "psg-pcos-care-01",
+      "source_id": "src-monash-pcos-2023",
+      "title": "International Evidence-Based Guideline for the Assessment and Management of Polycystic Ovary Syndrome 2023",
+      "url": "https://www.monash.edu/medicine/mchri/pcos/guideline",
+      "locator": "Chapter 4: When to Seek Medical Care & Clinical Follow-Up",
+      "category": "when_to_seek_care",
+      "topic_tags": [
+        "pcos",
+        "when to see a doctor",
+        "warning signs",
+        "irregular periods",
+        "amenorrhea",
+        "endometrial protection",
+        "metabolic screening"
+      ],
+      "text": "Individuals with suspected or known PCOS should consult a healthcare professional if menstrual cycles are consistently longer than 35 days or absent for 3 or more months (to protect the uterine lining from endometrial hyperplasia), if experiencing rapid onset of excess facial or body hair or voice deepening (to rule out androgen-secreting tumors), when planning pregnancy or experiencing difficulty conceiving after 6 to 12 months, or for routine cardiometabolic screening (blood pressure, glycemic status, and lipid profile) and mental health support.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-dys-eval-01",
+      "source_id": "src-acog-dysmenorrhea-2024",
+      "title": "ACOG Clinical Consensus: General Approaches to Medical Management of Menstrual Pain and Dysmenorrhea",
+      "url": "https://www.acog.org/clinical/clinical-guidance/clinical-consensus/articles/2024/03/general-approaches-to-medical-management-of-menstrual-pain",
+      "locator": "Section 1B: Clinical Evaluation and Diagnostic Criteria",
+      "category": "what_it_is",
+      "topic_tags": [
+        "dysmenorrhea",
+        "cramps",
+        "period pain",
+        "diagnosis",
+        "clinical evaluation",
+        "ultrasound",
+        "secondary dysmenorrhea"
+      ],
+      "text": "Clinical evaluation of dysmenorrhea begins with a detailed menstrual and pain history to distinguish primary dysmenorrhea from secondary pelvic conditions. Primary dysmenorrhea is evaluated clinically based on typical crampy midline pain starting just before or at menstrual onset in individuals with normal pelvic findings. Pelvic ultrasonography or further diagnostic evaluation is indicated when pain is refractory to initial management, begins years after menarche, worsens progressively, or is accompanied by abnormal uterine bleeding, deep dyspareunia, or non-cyclic pelvic pain.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-dys-care-01",
+      "source_id": "src-acog-dysmenorrhea-2024",
+      "title": "ACOG Clinical Consensus: General Approaches to Medical Management of Menstrual Pain and Dysmenorrhea",
+      "url": "https://www.acog.org/clinical/clinical-guidance/clinical-consensus/articles/2024/03/general-approaches-to-medical-management-of-menstrual-pain",
+      "locator": "Section 4: Warning Signs & When to Seek Medical Care",
+      "category": "when_to_seek_care",
+      "topic_tags": [
+        "dysmenorrhea",
+        "cramps",
+        "period pain",
+        "warning signs",
+        "when to see a doctor",
+        "pelvic pain"
+      ],
+      "text": "Seek medical evaluation for menstrual pain if cramps progressively worsen over time, fail to improve after 3 to 6 months of self-care or standard management, regularly cause missed work or school, occur outside of menstruation, or are accompanied by painful intercourse, painful bowel movements, intermenstrual bleeding, or fever and abnormal vaginal discharge.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-hmb-eval-01",
+      "source_id": "src-cdc-menorrhagia-2024",
+      "title": "CDC Public Health Guide: Heavy Menstrual Bleeding (Menorrhagia) and Iron Deficiency",
+      "url": "https://www.cdc.gov/ncbddd/blooddisorders/women/menorrhagia.html",
+      "locator": "Section 1B: Clinical Assessment & Diagnostic Evaluation",
+      "category": "what_it_is",
+      "topic_tags": [
+        "heavy menstrual bleeding",
+        "menorrhagia",
+        "diagnosis",
+        "clinical evaluation",
+        "palm coein",
+        "ferritin",
+        "anemia"
+      ],
+      "text": "Clinical assessment of heavy menstrual bleeding evaluates structural causes (polyps, adenomyosis, leiomyomas/fibroids, malignancy or hyperplasia) and non-structural causes (coagulopathies such as von Willebrand disease, ovulatory dysfunction, endometrial factors, or iatrogenic causes), known as the FIGO PALM-COEIN classification. Laboratory evaluation typically includes a complete blood count (CBC), serum ferritin to detect iron deficiency, pregnancy testing, thyroid function testing, and targeted coagulation or pelvic ultrasound studies.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-hmb-care-01",
+      "source_id": "src-cdc-menorrhagia-2024",
+      "title": "CDC Public Health Guide: Heavy Menstrual Bleeding (Menorrhagia) and Iron Deficiency",
+      "url": "https://www.cdc.gov/ncbddd/blooddisorders/women/menorrhagia.html",
+      "locator": "Section 4: Warning Signs & When to See a Doctor",
+      "category": "when_to_seek_care",
+      "topic_tags": [
+        "heavy menstrual bleeding",
+        "menorrhagia",
+        "warning signs",
+        "when to see a doctor",
+        "anemia",
+        "clots"
+      ],
+      "text": "Consult a healthcare professional promptly if menstrual bleeding lasts longer than 7 days, regularly requires changing protection every 1 to 2 hours, passes blood clots larger than a quarter, causes persistent fatigue, pallor, or shortness of breath suggestive of iron-deficiency anemia, or if any vaginal bleeding occurs after menopause. Seek immediate emergency care if heavy bleeding is accompanied by dizziness, fainting, chest pain, or possible pregnancy.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-endo-eval-01",
+      "source_id": "src-who-endometriosis-2023",
+      "title": "WHO Fact Sheet: Endometriosis Pathophysiology, Symptoms, and Supportive Care",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/endometriosis",
+      "locator": "Section 1B: Clinical Evaluation and Diagnosis",
+      "category": "what_it_is",
+      "topic_tags": [
+        "endometriosis",
+        "diagnosis",
+        "clinical evaluation",
+        "assessment",
+        "ultrasound",
+        "mri",
+        "laparoscopy"
+      ],
+      "text": "Clinical evaluation for endometriosis begins with a thorough review of menstrual and chronic pelvic pain symptoms combined with a physical pelvic examination. Modern guidelines support clinical diagnosis and imaging-based evaluation using transvaginal ultrasound or pelvic magnetic resonance imaging (MRI) to identify ovarian endometriomas and deep infiltrating endometriosis. Diagnostic laparoscopy with histologic confirmation is reserved for cases where imaging is negative or when surgical intervention is planned.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-endo-care-01",
+      "source_id": "src-who-endometriosis-2023",
+      "title": "WHO Fact Sheet: Endometriosis Pathophysiology, Symptoms, and Supportive Care",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/endometriosis",
+      "locator": "Section 4: When to Seek Care & Specialist Referral",
+      "category": "when_to_seek_care",
+      "topic_tags": [
+        "endometriosis",
+        "warning signs",
+        "when to see a doctor",
+        "pelvic pain",
+        "dyspareunia",
+        "infertility"
+      ],
+      "text": "A healthcare evaluation is recommended whenever pelvic pain interferes with daily activities, work, or relationships; when menstrual cramps worsen over time or do not respond to supportive care; when pain occurs during intercourse, bowel movements, or urination; or when difficulty conceiving persists. Early evaluation helps reduce diagnostic delay and prevents progression of chronic pain sensitization.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-pms-def-01",
+      "source_id": "src-acog-pms-2024",
+      "title": "ACOG Clinical Practice Guideline: Management of Premenstrual Syndrome (PMS) and Premenstrual Dysphoric Disorder (PMDD)",
+      "url": "https://www.acog.org/clinical/clinical-guidance/clinical-practice-guideline/articles/2023/12/management-of-premenstrual-disorders",
+      "locator": "Section 1: Overview & Definition of PMS and PMDD",
+      "category": "what_it_is",
+      "topic_tags": [
+        "pms",
+        "pmdd",
+        "premenstrual syndrome",
+        "premenstrual dysphoric disorder",
+        "luteal phase",
+        "definition"
+      ],
+      "text": "Premenstrual syndrome (PMS) encompasses a recurring pattern of physical, emotional, and behavioral symptoms that emerge during the luteal phase of the menstrual cycle (the 1 to 2 weeks before menstruation), resolve shortly after menstrual bleeding begins, and are followed by a symptom-free interval before ovulation. Premenstrual dysphoric disorder (PMDD) is a severe, clinically distinct form of premenstrual disorder characterized by prominent affective symptoms\u2014such as marked mood lability, irritability, dysphoria, or anxiety\u2014that cause significant functional impairment.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-pms-eval-01",
+      "source_id": "src-acog-pms-2024",
+      "title": "ACOG Clinical Practice Guideline: Management of Premenstrual Syndrome (PMS) and Premenstrual Dysphoric Disorder (PMDD)",
+      "url": "https://www.acog.org/clinical/clinical-guidance/clinical-practice-guideline/articles/2023/12/management-of-premenstrual-disorders",
+      "locator": "Section 2: Diagnostic Criteria & Prospective Symptom Charting",
+      "category": "what_it_is",
+      "topic_tags": [
+        "pms",
+        "pmdd",
+        "premenstrual",
+        "diagnosis",
+        "clinical evaluation",
+        "criteria",
+        "symptom diary"
+      ],
+      "text": "Clinical assessment of PMS and PMDD requires prospective daily symptom charting across at least two consecutive menstrual cycles (such as the Daily Record of Severity of Problems) to confirm that symptoms are strictly cyclical\u2014appearing in the luteal phase and remitting within a few days of menses onset\u2014and to distinguish premenstrual disorders from underlying mood or anxiety disorders, thyroid dysfunction, or perimenopause.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-pms-sym-01",
+      "source_id": "src-acog-pms-2024",
+      "title": "ACOG Clinical Practice Guideline: Management of Premenstrual Syndrome (PMS) and Premenstrual Dysphoric Disorder (PMDD)",
+      "url": "https://www.acog.org/clinical/clinical-guidance/clinical-practice-guideline/articles/2023/12/management-of-premenstrual-disorders",
+      "locator": "Section 3: Affective and Physical Symptoms",
+      "category": "symptoms",
+      "topic_tags": [
+        "pms",
+        "pmdd",
+        "premenstrual",
+        "symptoms",
+        "mood swings",
+        "irritability",
+        "bloating",
+        "breast tenderness",
+        "fatigue"
+      ],
+      "text": "Common symptoms of PMS and PMDD include affective and cognitive changes (mood swings, heightened irritability, depressed mood, anxiety, tension, tearfulness, difficulty concentrating, and feeling overwhelmed) alongside physical symptoms such as breast tenderness (mastalgia), abdominal bloating, food cravings or appetite changes, headache, joint or muscle aches, sleep disturbances, and fatigue during the week prior to menstruation.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-pms-prev-01",
+      "source_id": "src-acog-pms-2024",
+      "title": "ACOG Clinical Practice Guideline: Management of Premenstrual Syndrome (PMS) and Premenstrual Dysphoric Disorder (PMDD)",
+      "url": "https://www.acog.org/clinical/clinical-guidance/clinical-practice-guideline/articles/2023/12/management-of-premenstrual-disorders",
+      "locator": "Section 4: Lifestyle, Exercise, and Nutritional Strategies",
+      "category": "prevention_and_lifestyle",
+      "topic_tags": [
+        "pms",
+        "pmdd",
+        "premenstrual",
+        "lifestyle",
+        "prevention",
+        "exercise",
+        "diet",
+        "calcium",
+        "sleep",
+        "stress"
+      ],
+      "text": "Evidence-based lifestyle and non-pharmacologic measures recommended for reducing PMS and PMDD symptoms include regular aerobic exercise throughout the menstrual cycle, cognitive behavioral therapy (CBT) and mindfulness-based stress reduction, maintaining consistent sleep schedules, consuming complex carbohydrates and calcium-rich foods (clinical guidelines note dietary or supplemental calcium intake of 1,000 to 1,200 mg daily reduces physical and mood symptoms), and limiting excess sodium, refined sugar, caffeine, and alcohol during the luteal phase.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-pms-care-01",
+      "source_id": "src-acog-pms-2024",
+      "title": "ACOG Clinical Practice Guideline: Management of Premenstrual Syndrome (PMS) and Premenstrual Dysphoric Disorder (PMDD)",
+      "url": "https://www.acog.org/clinical/clinical-guidance/clinical-practice-guideline/articles/2023/12/management-of-premenstrual-disorders",
+      "locator": "Section 5: When to Seek Clinical Care",
+      "category": "when_to_seek_care",
+      "topic_tags": [
+        "pms",
+        "pmdd",
+        "premenstrual",
+        "when to see a doctor",
+        "warning signs",
+        "mood"
+      ],
+      "text": "Consult a healthcare professional if premenstrual mood or physical symptoms disrupt work, school, or interpersonal relationships, if symptoms persist throughout the entire month rather than resolving after menstruation begins, or if lifestyle measures do not provide adequate relief. Seek immediate crisis or emergency care if experiencing thoughts of self-harm or hopelessness.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-fib-def-01",
+      "source_id": "src-nichd-fibroids-2024",
+      "title": "Uterine Fibroids (Leiomyomas): Overview, Symptoms, Evaluation, and Supportive Care",
+      "url": "https://www.nichd.nih.gov/health/topics/uterine",
+      "locator": "Section 1: What are Uterine Fibroids",
+      "category": "what_it_is",
+      "topic_tags": [
+        "fibroids",
+        "uterine fibroids",
+        "leiomyoma",
+        "myoma",
+        "definition",
+        "what are fibroids"
+      ],
+      "text": "Uterine fibroids (medically termed leiomyomas or myomas) are common, non-cancerous (benign) muscular tumors that grow within or on the wall of the uterus. Fibroids can develop as a single nodule or in clusters, vary in size from microscopic seedlings to large masses that enlarge the uterus, and are classified by location as submucosal (projecting into the uterine cavity), intramural (within the muscular uterine wall), or subserosal (projecting outside the uterus).",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-fib-eval-01",
+      "source_id": "src-nichd-fibroids-2024",
+      "title": "Uterine Fibroids (Leiomyomas): Overview, Symptoms, Evaluation, and Supportive Care",
+      "url": "https://www.nichd.nih.gov/health/topics/uterine",
+      "locator": "Section 2: Clinical Evaluation and Imaging Diagnosis",
+      "category": "what_it_is",
+      "topic_tags": [
+        "fibroids",
+        "uterine fibroids",
+        "leiomyoma",
+        "diagnosis",
+        "clinical evaluation",
+        "ultrasound",
+        "hysteroscopy"
+      ],
+      "text": "Clinical assessment of uterine fibroids involves a bimanual pelvic examination and pelvic ultrasonography (transvaginal and transabdominal ultrasound) as the primary diagnostic imaging modality to map fibroid size, number, and location. Saline infusion sonohysterography, hysteroscopy, or pelvic MRI may be used when detailed assessment of the uterine cavity is needed for heavy bleeding or fertility evaluation.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-fib-sym-01",
+      "source_id": "src-nichd-fibroids-2024",
+      "title": "Uterine Fibroids (Leiomyomas): Overview, Symptoms, Evaluation, and Supportive Care",
+      "url": "https://www.nichd.nih.gov/health/topics/uterine",
+      "locator": "Section 3: Common Symptoms of Uterine Fibroids",
+      "category": "symptoms",
+      "topic_tags": [
+        "fibroids",
+        "uterine fibroids",
+        "leiomyoma",
+        "symptoms",
+        "heavy bleeding",
+        "pelvic pressure",
+        "frequent urination",
+        "backache"
+      ],
+      "text": "Many uterine fibroids cause no symptoms and are discovered incidentally during a routine pelvic exam. When symptomatic, common manifestations include heavy or prolonged menstrual bleeding (often with blood clots and secondary iron-deficiency anemia), pelvic pressure or fullness, lower abdominal enlargement, frequent urination or difficulty emptying the bladder due to bladder compression, constipation, lower back or leg pain, and pain during intercourse.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-fib-prev-01",
+      "source_id": "src-nichd-fibroids-2024",
+      "title": "Uterine Fibroids (Leiomyomas): Overview, Symptoms, Evaluation, and Supportive Care",
+      "url": "https://www.nichd.nih.gov/health/topics/uterine",
+      "locator": "Section 4: Lifestyle Habits & Supportive Self-Care",
+      "category": "prevention_and_lifestyle",
+      "topic_tags": [
+        "fibroids",
+        "uterine fibroids",
+        "leiomyoma",
+        "lifestyle",
+        "prevention",
+        "diet",
+        "exercise",
+        "iron",
+        "vitamin d"
+      ],
+      "text": "Although the exact cause of uterine fibroids involves genetic and hormonal factors that cannot be fully prevented, supportive lifestyle habits help manage symptoms and support overall reproductive health. Evidence-informed habits include eating a diet rich in green vegetables, fruits, and dietary fiber while limiting red or processed meats; maintaining adequate vitamin D status; consuming iron-rich foods with vitamin C to counter menstrual blood loss; engaging in regular physical activity; maintaining healthy blood pressure; and tracking menstrual bleeding patterns and pelvic symptoms.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-fib-care-01",
+      "source_id": "src-nichd-fibroids-2024",
+      "title": "Uterine Fibroids (Leiomyomas): Overview, Symptoms, Evaluation, and Supportive Care",
+      "url": "https://www.nichd.nih.gov/health/topics/uterine",
+      "locator": "Section 5: When to Seek Medical Care for Fibroids",
+      "category": "when_to_seek_care",
+      "topic_tags": [
+        "fibroids",
+        "uterine fibroids",
+        "leiomyoma",
+        "warning signs",
+        "when to see a doctor",
+        "heavy bleeding",
+        "pelvic pain"
+      ],
+      "text": "See a healthcare professional if you experience persistently heavy, prolonged, or painful periods, bleeding or spotting between periods, chronic pelvic pressure or difficulty emptying your bladder, or unexplained fatigue and weakness. Seek emergency medical attention for sudden, sharp, severe pelvic pain or rapid heavy vaginal bleeding accompanied by dizziness or fainting.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-meno-def-01",
+      "source_id": "src-who-menopause-2024",
+      "title": "WHO Fact Sheet: Menopause and Perimenopausal Transition Health",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/menopause",
+      "locator": "Section 1: Definition of Perimenopause and Menopause",
+      "category": "what_it_is",
+      "topic_tags": [
+        "menopause",
+        "perimenopause",
+        "menopausal transition",
+        "definition",
+        "what is menopause",
+        "what is perimenopause"
+      ],
+      "text": "Menopause is the natural biological transition marking the permanent end of menstrual cycles due to the loss of ovarian follicular function and declining estrogen levels, confirmed retrospectively after 12 consecutive months without menstruation in the absence of other causes (typically occurring between ages 45 and 55). Perimenopause refers to the transitional years leading up to the final menstrual period, characterized by fluctuating ovarian hormone levels and changes in menstrual cycle length and flow.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-meno-eval-01",
+      "source_id": "src-who-menopause-2024",
+      "title": "WHO Fact Sheet: Menopause and Perimenopausal Transition Health",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/menopause",
+      "locator": "Section 1B: Clinical Evaluation of Perimenopause and Menopause",
+      "category": "what_it_is",
+      "topic_tags": [
+        "menopause",
+        "perimenopause",
+        "diagnosis",
+        "clinical evaluation",
+        "assessment",
+        "fsh"
+      ],
+      "text": "In healthy adults aged 45 and older, perimenopause and menopause are evaluated clinically based on menstrual cycle history and characteristic vasomotor or urogenital symptoms without requiring routine hormone blood tests, because follicle-stimulating hormone (FSH) and estradiol levels fluctuate markedly from day to day. Laboratory evaluation is reserved for individuals younger than 45 (to evaluate for premature ovarian insufficiency or early menopause) or when excluding thyroid disease, hyperprolactinemia, or pregnancy.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-meno-sym-01",
+      "source_id": "src-who-menopause-2024",
+      "title": "WHO Fact Sheet: Menopause and Perimenopausal Transition Health",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/menopause",
+      "locator": "Section 2: Vasomotor, Urogenital, and Systemic Symptoms",
+      "category": "symptoms",
+      "topic_tags": [
+        "menopause",
+        "perimenopause",
+        "symptoms",
+        "hot flashes",
+        "night sweats",
+        "irregular periods",
+        "sleep",
+        "vaginal dryness"
+      ],
+      "text": "Symptoms of perimenopause and menopause include irregular menstrual cycles (shorter or longer intervals, lighter or heavier flow before periods stop), vasomotor symptoms such as hot flashes (sudden waves of heat in the upper body) and night sweats, sleep disturbances and insomnia, mood changes or irritability, difficulty concentrating, genitourinary symptoms (vaginal dryness, discomfort during intercourse, or urinary urgency), and joint or muscle stiffness.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-meno-prev-01",
+      "source_id": "src-who-menopause-2024",
+      "title": "WHO Fact Sheet: Menopause and Perimenopausal Transition Health",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/menopause",
+      "locator": "Section 3: Healthy Lifestyle, Bone, and Cardiovascular Support",
+      "category": "prevention_and_lifestyle",
+      "topic_tags": [
+        "menopause",
+        "perimenopause",
+        "lifestyle",
+        "prevention",
+        "bone health",
+        "calcium",
+        "exercise",
+        "hot flashes"
+      ],
+      "text": "Supportive lifestyle habits during perimenopause and postmenopause protect long-term bone and cardiovascular health while easing daily symptoms. Key habits include regular weight-bearing and resistance strength exercise combined with aerobic activity; consuming adequate calcium, vitamin D, and protein to preserve bone mineral density; dressing in breathable layers, keeping sleeping environments cool, and limiting alcohol, caffeine, and spicy foods that trigger hot flashes; avoiding tobacco use; and maintaining regular preventive health screenings.",
+      "reviewed_at": "2026-11-12"
+    },
+    {
+      "passage_id": "psg-meno-care-01",
+      "source_id": "src-who-menopause-2024",
+      "title": "WHO Fact Sheet: Menopause and Perimenopausal Transition Health",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/menopause",
+      "locator": "Section 4: Warning Signs & Postmenopausal Bleeding",
+      "category": "when_to_seek_care",
+      "topic_tags": [
+        "menopause",
+        "perimenopause",
+        "warning signs",
+        "when to see a doctor",
+        "postmenopausal bleeding"
+      ],
+      "text": "Always seek prompt medical evaluation for any vaginal bleeding or spotting that occurs after menopause (after 12 consecutive months without a period), for bleeding between periods or after intercourse during perimenopause, for menstrual cycles occurring more frequently than every 21 days or lasting longer than 7 days, if menopausal symptoms occur before age 40 to 45, or when vasomotor, sleep, or urogenital symptoms impair quality of life.",
+      "reviewed_at": "2026-11-12"
     }
   ],
   "provenance_status": "development_unverified",

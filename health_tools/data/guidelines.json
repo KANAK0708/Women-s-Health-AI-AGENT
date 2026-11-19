@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "kind": "clinical",
+  "version": "2026-11-06-empty",
+  "passages": [],
+  "candidates": [
+    {
+      "title": "International evidence-based PCOS guideline",
+      "url": "https://www.monash.edu/medicine/mchri/pcos/guideline",
+      "status": "pending_rights_and_clinical_review"
+    },
+    {
+      "title": "NHS irregular periods patient information",
+      "url": "https://www.nhs.uk/symptoms/irregular-periods/",
+      "status": "pending_rights_and_clinical_review"
+    }
+  ]
+}

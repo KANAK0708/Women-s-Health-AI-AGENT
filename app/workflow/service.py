@@ -26,13 +26,20 @@ from health_tools.workflow import Orchestrator, SafetyDecision, ToolPolicy, Work
 
 
 class HealthApplication:
-    def __init__(self, *, store=None, retrieve=None, pubmed_search=None, policy=None, claim_verifier=None,
+    def __init__(self, *, store=None, retrieve=None, pubmed_search=None,
+                 medlineplus_search=None, europepmc_search=None,
+                 clinical_trials_search=None, guideline_search=None,
+                 policy=None, claim_verifier=None,
                  pending_task_store: PendingTaskStore | None = None, allow_unverified_for_development=None):
         self.store = store if store is not None else get_session_store()
         self.policy = policy or ToolPolicy()
         self._retrieve_callback = retrieve
         self._engine = None
         self._pubmed_search = pubmed_search
+        self._medlineplus_search = medlineplus_search
+        self._europepmc_search = europepmc_search
+        self._clinical_trials_search = clinical_trials_search
+        self._guideline_search = guideline_search
         self._claim_verifier = claim_verifier
         self.pending_tasks = pending_task_store if pending_task_store is not None else InMemoryPendingTaskStore()
         self._pending_store_failed = False
@@ -254,6 +261,14 @@ class HealthApplication:
                             retrieve=retrieve_turn, policy=self.policy)
         if self._pubmed_search is not None:
             dependencies["pubmed_search"] = self._pubmed_search
+        if self._medlineplus_search is not None:
+            dependencies["medlineplus_search"] = self._medlineplus_search
+        if self._europepmc_search is not None:
+            dependencies["europepmc_search"] = self._europepmc_search
+        if self._clinical_trials_search is not None:
+            dependencies["clinical_trials_search"] = self._clinical_trials_search
+        if self._guideline_search is not None:
+            dependencies["guideline_search"] = self._guideline_search
         pending_result = None
         routed_query, routed_inputs, task_events = query, tool_inputs, ()
         if isinstance(query, str) and query.strip() and len(query) <= 4000:

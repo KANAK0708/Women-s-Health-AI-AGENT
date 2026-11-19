@@ -40,8 +40,13 @@ def main():
     parser.add_argument("--period-starts", nargs="+", help="Confirmed starts, oldest first, YYYY-MM-DD")
     parser.add_argument("--as-of", help="Local reference date for cycle arithmetic, YYYY-MM-DD")
     parser.add_argument("--remember", action="store_true", help="Retain minimal context in this process until expiry/deletion")
-    parser.add_argument("--allow-external-research", action="store_true", help="Authorize sending separately supplied research terms to NCBI")
+    parser.add_argument("--allow-external-research", action="store_true", help="Authorize sending separately supplied research terms to external biomedical APIs")
     parser.add_argument("--research-query", help="Research terms without personal identifiers")
+    parser.add_argument(
+        "--research-source",
+        choices=("pubmed", "medlineplus", "europepmc", "clinical_trials"),
+        help="Optional external medical source to query when research is authorized",
+    )
     parser.add_argument("--jurisdiction", default="Global")
     parser.add_argument("--json", action="store_true", help="Print the structured EducationalResponse")
     parser.add_argument("--development-evidence", action="store_true", help="Explicitly allow unverified fixtures for software testing only")
@@ -51,7 +56,7 @@ def main():
         allow_session_context=args.remember,
         period_start_dates=args.period_starts, as_of=args.as_of,
         jurisdiction=args.jurisdiction, allow_external_research=args.allow_external_research,
-        research_query=args.research_query,
+        research_query=args.research_query, research_source=args.research_source,
     )
     if not args.json:
         print("Development build: evidence-review metadata and safety rules need clinical verification.")

@@ -1,10 +1,11 @@
 """Hybrid lexical + vector scoring and bounded excerpt reranking.
 
 Implements Section 6 of the Implementation Plan:
-- Combines lexical term matching (BM25-inspired) with vector cosine similarity.
-- Boosts passages matching the user's educational intent (definition / 'what it is',
-  symptoms, prevention & lifestyle).
-- Caps candidate pool (~20) and returns bounded excerpts (4 to 8 passages).
+- Combines lexical term matching (BM25-inspired + phrase/tag bonuses) with vector cosine similarity.
+- Expands medical/clinical synonyms across PCOS, menstrual disorders, endometriosis,
+  uterine fibroids, PMS/PMDD, perimenopause/menopause, and iron-deficiency anemia.
+- Boosts passages matching the user's educational intent and preserves facet diversity
+  within bounded excerpts.
 """
 
 import hashlib
@@ -29,10 +30,54 @@ SYNONYM_EXPANSIONS: dict[str, list[str]] = {
     "pcos": ["polycystic", "ovary", "syndrome", "hormonal", "androgens", "ovulation"],
     "period": ["menstrual", "menstruation", "cycle", "bleeding", "periods"],
     "periods": ["menstrual", "menstruation", "cycle", "bleeding", "irregular"],
-    "cramps": ["dysmenorrhea", "cramping", "pelvic", "pain", "menstrual"],
+    "menstruation": ["menstrual", "period", "periods", "cycle", "bleeding"],
+    "cramps": ["dysmenorrhea", "cramping", "pelvic", "pain", "menstrual", "prostaglandin"],
+    "cramping": ["dysmenorrhea", "cramps", "pelvic", "pain", "menstrual"],
+    "dysmenorrhea": ["cramps", "cramping", "painful", "pelvic", "pain", "menstrual"],
+    "menorrhagia": ["heavy", "bleeding", "menstrual", "clots", "anemia", "iron"],
+    "oligomenorrhea": ["irregular", "infrequent", "periods", "menstrual", "cycle", "pcos"],
+    "amenorrhea": ["absent", "missed", "periods", "menstrual", "ovulation", "pcos"],
+    "endometriosis": ["endometrial", "pelvic", "pain", "dyspareunia", "chronic", "adhesions"],
+    "dyspareunia": ["endometriosis", "painful", "intercourse", "pelvic", "pain"],
+    "fibroid": ["fibroids", "uterine", "leiomyoma", "leiomyomas", "myoma", "heavy", "bleeding"],
+    "fibroids": ["fibroid", "uterine", "leiomyoma", "leiomyomas", "myoma", "heavy", "bleeding"],
+    "leiomyoma": ["fibroids", "uterine", "myoma", "leiomyomas", "benign"],
+    "leiomyomas": ["fibroids", "uterine", "leiomyoma", "myoma", "benign"],
+    "myoma": ["fibroids", "uterine", "leiomyoma"],
+    "pms": ["premenstrual", "syndrome", "luteal", "mood", "bloating", "pmdd"],
+    "pmdd": ["premenstrual", "dysphoric", "disorder", "luteal", "mood", "pms"],
+    "premenstrual": ["pms", "pmdd", "luteal", "mood", "bloating"],
+    "menopause": ["perimenopause", "menopausal", "hot", "flashes", "vasomotor", "estrogen"],
+    "perimenopause": ["menopause", "perimenopausal", "menopausal", "hot", "flashes", "vasomotor"],
+    "anemia": ["iron", "deficiency", "ferritin", "fatigue", "heavy", "bleeding", "menorrhagia"],
+    "hirsutism": ["excess", "facial", "hair", "androgens", "hyperandrogenism", "pcos"],
     "prevent": ["prevention", "lifestyle", "habits", "exercise", "diet", "self-care"],
     "prevention": ["lifestyle", "habits", "exercise", "diet", "management"],
     "symptom": ["symptoms", "signs", "irregular", "hirsutism", "acne"],
+}
+
+# Medical condition anchor synonyms so variant terminology (e.g., leiomyoma -> fibroids, pcod -> pcos)
+# matches passages across all categories of that condition.
+CONDITION_ANCHOR_SYNONYMS: dict[str, list[str]] = {
+    "pcod": ["pcos", "polycystic"],
+    "pcos": ["polycystic", "pcod"],
+    "cramps": ["dysmenorrhea", "cramping", "menstrual"],
+    "cramping": ["dysmenorrhea", "cramps", "menstrual"],
+    "dysmenorrhea": ["cramps", "cramping", "menstrual"],
+    "menorrhagia": ["heavy", "bleeding", "menstrual"],
+    "oligomenorrhea": ["irregular", "periods", "menstrual", "pcos"],
+    "amenorrhea": ["absent", "periods", "menstrual", "pcos"],
+    "fibroid": ["fibroids", "leiomyoma", "leiomyomas", "myoma", "uterine"],
+    "fibroids": ["fibroid", "leiomyoma", "leiomyomas", "myoma", "uterine"],
+    "leiomyoma": ["fibroids", "fibroid", "uterine", "myoma"],
+    "leiomyomas": ["fibroids", "fibroid", "uterine", "myoma"],
+    "myoma": ["fibroids", "fibroid", "leiomyoma", "uterine"],
+    "pms": ["premenstrual", "pmdd"],
+    "pmdd": ["premenstrual", "pms", "dysphoric"],
+    "premenstrual": ["pms", "pmdd"],
+    "perimenopause": ["menopause", "perimenopausal", "menopausal"],
+    "menopause": ["perimenopause", "menopausal"],
+    "endometriosis": ["endometrial", "dyspareunia"],
 }
 
 # These words describe the question, not the condition or product being asked about.
@@ -41,7 +86,11 @@ GENERIC_QUERY_TERMS = {
     "sign", "signs", "definition", "overview", "explain", "prevention",
     "prevent", "lifestyle", "manage", "management", "treatment", "pill",
     "medicine", "medication", "health", "problem", "problems", "condition",
+    "diagnosed", "diagnosis", "evaluate", "evaluated", "evaluation", "assess",
+    "assessed", "assessment", "criteria", "doctor", "care", "seek", "warning",
 }
+
+_ASSESSMENT_LOCATOR_RE = re.compile(r"diagnos\w*|criteria|clinical (?:assessment|evaluation)", re.I)
 
 
 @dataclass(frozen=True)
@@ -72,7 +121,12 @@ def tokenize(text: str, *, expand_synonyms: bool = False) -> list[str]:
 def topic_anchor_terms(query: str) -> list[str]:
     """Return distinctive topic terms required in a supporting passage."""
     normalized = re.sub(r"\bi[\s-]?pill\b", "ipill", query.lower())
-    return sorted(set(tokenize(normalized)) - GENERIC_QUERY_TERMS)
+    base_anchors = set(tokenize(normalized)) - GENERIC_QUERY_TERMS
+    expanded_anchors = set(base_anchors)
+    for token in base_anchors:
+        if token in CONDITION_ANCHOR_SYNONYMS:
+            expanded_anchors.update(CONDITION_ANCHOR_SYNONYMS[token])
+    return sorted(expanded_anchors - GENERIC_QUERY_TERMS)
 
 
 def compute_hashed_embedding(text: str, dim: int = 256) -> np.ndarray:
@@ -114,13 +168,13 @@ def detect_educational_intents(query: str) -> set[EducationalCategory]:
     q_lower = query.lower()
     intents: set[EducationalCategory] = set()
 
-    if any(k in q_lower for k in ("what is", "what are", "define", "meaning", "overview", "explain", "know about")):
+    if any(k in q_lower for k in ("what is", "what are", "define", "meaning", "overview", "explain", "know about", "diagnos", "criteria", "evaluat", "assess")):
         intents.add(EducationalCategory.DEFINITION)
-    if any(k in q_lower for k in ("symptom", "sign", "feel like", "experience", "irregular", "cramp", "acne", "hair")):
+    if any(k in q_lower for k in ("symptom", "sign", "feel like", "experience", "irregular", "cramp", "acne", "hair", "hot flash", "bloat", "bleeding")):
         intents.add(EducationalCategory.SYMPTOMS)
-    if any(k in q_lower for k in ("prevent", "lifestyle", "habit", "diet", "exercise", "manage", "self-care", "help", "reduce")):
+    if any(k in q_lower for k in ("prevent", "lifestyle", "habit", "diet", "exercise", "manage", "self-care", "help", "reduce", "nutrition", "iron")):
         intents.add(EducationalCategory.PREVENTION_LIFESTYLE)
-    if any(k in q_lower for k in ("doctor", "urgent", "hospital", "when to seek", "warning")):
+    if any(k in q_lower for k in ("doctor", "urgent", "hospital", "when to seek", "when should i see", "warning")):
         intents.add(EducationalCategory.WHEN_TO_SEEK_CARE)
 
     # Default: if the user asks a broad topic question (e.g., "PCOS"), cover all three core pillars
@@ -133,6 +187,15 @@ def detect_educational_intents(query: str) -> set[EducationalCategory]:
             }
         )
     return intents
+
+
+def _facet_bucket(passage: EvidencePassage) -> str:
+    """Return a facet bucket key so definition and assessment don't crowd each other out."""
+    if passage.category == EducationalCategory.DEFINITION:
+        if _ASSESSMENT_LOCATOR_RE.search(passage.locator):
+            return "assessment"
+        return "definition"
+    return passage.category.value
 
 
 def rerank_passages(
@@ -148,6 +211,7 @@ def rerank_passages(
     if not candidates:
         return []
 
+    raw_query_tokens = tokenize(query, expand_synonyms=False)
     query_tokens = tokenize(query, expand_synonyms=True)
     anchors = topic_anchor_terms(query)
     if not query_tokens or not anchors:
@@ -155,6 +219,7 @@ def rerank_passages(
 
     query_vec = compute_hashed_embedding(query)
     active_intents = {preferred_category} if preferred_category else detect_educational_intents(query)
+    wants_assessment = bool(re.search(r"\b(?:diagnos\w*|criteria|assessment|evaluat\w*)\b", query.lower()))
 
     # Precompute document frequencies across candidate pool for IDF weighting
     num_docs = len(candidates)
@@ -170,12 +235,14 @@ def rerank_passages(
 
     scored_pool: list[ScoredPassage] = []
     unique_query_tokens = set(query_tokens)
+    anchor_set = set(anchors)
 
     for idx, passage in enumerate(candidates):
         t_set = doc_token_sets[idx]
-        if not t_set.intersection(anchors):
+        if not t_set.intersection(anchor_set):
             continue
         tag_tokens = set(tokenize(" ".join(passage.topic_tags), expand_synonyms=False))
+        title_tokens = set(tokenize(passage.title, expand_synonyms=False))
 
         # 1. Lexical IDF-weighted overlap score
         matched_weight = 0.0
@@ -185,8 +252,17 @@ def rerank_passages(
             idf = math.log(1.0 + (num_docs - df + 0.5) / (df + 0.5))
             total_weight += idf
             if q_tok in t_set:
-                tag_multiplier = 1.35 if q_tok in tag_tokens else 1.0
+                tag_multiplier = 1.40 if q_tok in tag_tokens else (1.20 if q_tok in title_tokens else 1.0)
                 matched_weight += idf * tag_multiplier
+
+        # Direct anchor match in topic_tags bonus
+        if anchor_set.intersection(tag_tokens):
+            matched_weight += 0.15 * total_weight
+
+        # Exact query token overlap bonus
+        if raw_query_tokens:
+            exact_hits = sum(1 for tok in set(raw_query_tokens) if tok in t_set)
+            matched_weight += 0.08 * (exact_hits / len(set(raw_query_tokens))) * total_weight
 
         lexical_score = (matched_weight / total_weight) if total_weight > 0 else 0.0
         lexical_score = min(1.0, lexical_score)
@@ -201,7 +277,16 @@ def rerank_passages(
 
         # 3. Educational intent boost (only applied when there is base lexical/vector relevance)
         base_score = 0.60 * lexical_score + 0.40 * vector_score
-        intent_boost = 0.12 if (base_score >= 0.08 and passage.category in active_intents) else 0.0
+        intent_boost = 0.0
+        if base_score >= 0.08 and passage.category in active_intents:
+            is_assessment_passage = bool(_ASSESSMENT_LOCATOR_RE.search(passage.locator))
+            if passage.category == EducationalCategory.DEFINITION:
+                if wants_assessment == is_assessment_passage:
+                    intent_boost = 0.14
+                else:
+                    intent_boost = 0.06
+            else:
+                intent_boost = 0.12
 
         final_score = base_score + intent_boost
         if final_score >= min_score_threshold:
@@ -217,5 +302,29 @@ def rerank_passages(
 
     scored_pool.sort(key=lambda item: item.final_score, reverse=True)
     shortlist = scored_pool[:max_candidates]
-    return shortlist[:max_excerpts]
+    if len(shortlist) <= max_excerpts or preferred_category is not None:
+        return shortlist[:max_excerpts]
 
+    # Preserve facet diversity so a single category does not crowd out other requested facets
+    selected: list[ScoredPassage] = []
+    seen_ids: set[str] = set()
+    seen_buckets: set[str] = set()
+
+    for item in shortlist:
+        bucket = _facet_bucket(item.passage)
+        if bucket not in seen_buckets:
+            selected.append(item)
+            seen_ids.add(item.passage.passage_id)
+            seen_buckets.add(bucket)
+            if len(selected) >= max_excerpts:
+                break
+
+    for item in shortlist:
+        if len(selected) >= max_excerpts:
+            break
+        if item.passage.passage_id not in seen_ids:
+            selected.append(item)
+            seen_ids.add(item.passage.passage_id)
+
+    selected.sort(key=lambda item: item.final_score, reverse=True)
+    return selected[:max_excerpts]
