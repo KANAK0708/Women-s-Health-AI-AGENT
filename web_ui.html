@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Women's Health AI Agent</title>
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --sidebar: #f5f3ec;
+      --surface: #ffffff;
+      --surface-2: #f0eee6;
+      --border: #e8e5db;
+      --border-strong: #d9d5c8;
+      --text: #1f1e1d;
+      --text-2: #3d3b37;
+      --muted: #7a776d;
+      --accent: #c15f3c;
+      --accent-ink: #fff;
+      --accent-soft: rgba(193, 95, 60, .10);
+      --user-bubble: #efece2;
+      --ok: #2f7d4f; --warn: #a8660a; --danger: #b83a2e; --info: #6a6ad8;
+      --danger-bg: #fcefec; --danger-border: #f0c9c2;
+      --code-bg: #1f1e1d; --code-text: #ece9df;
+      --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+      --mono: ui-monospace, "SF Mono", Menlo, monospace;
+      --shadow: 0 1px 2px rgba(31,30,29,.04), 0 6px 24px rgba(31,30,29,.07);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #262624; --sidebar: #1f1e1d; --surface: #30302e; --surface-2: #3a3936;
+        --border: #3b3935; --border-strong: #4d4a44; --text: #ece9df; --text-2: #cfcbbf; --muted: #9b978b;
+        --accent: #d97757; --accent-ink: #1f1e1d; --accent-soft: rgba(217,119,87,.14);
+        --user-bubble: #141413; --code-bg: #171716;
+        --ok: #6cc08b; --warn: #e0a04c; --danger: #ef7b6d; --info: #9a9af0;
+        --danger-bg: #3a2420; --danger-border: #6a3a33;
+        --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.3);
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.6; display: flex; overflow: hidden; -webkit-font-smoothing: antialiased; }
+    button { font: inherit; color: inherit; cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    [hidden] { display: none !important; }
+
+    /* ───────── Sidebar ───────── */
+    aside { width: 268px; flex: none; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 16px 10px 12px; overflow-y: auto; }
+    .brand { display: flex; align-items: center; gap: 10px; padding: 2px 10px 16px; font-family: var(--serif); font-size: 1.1rem; letter-spacing: -.005em; }
+    .mark { width: 26px; height: 26px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-size: .85rem; flex: none; }
+    .new { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); font-size: .9rem; font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,.03); transition: .15s; }
+    .new:hover { border-color: var(--accent); color: var(--accent); }
+    .new svg { flex: none; }
+    .group { margin-top: 18px; }
+    .group > .gl, summary.gl { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 0 12px 6px; list-style: none; cursor: default; display: flex; justify-content: space-between; align-items: center; }
+    summary.gl { cursor: pointer; }
+    summary.gl::-webkit-details-marker { display: none; }
+    summary.gl::after { content: "＋"; font-size: .8rem; letter-spacing: 0; }
+    details[open] > summary.gl::after { content: "−"; }
+    .item { display: block; width: 100%; text-align: left; background: none; border: none; border-radius: 9px; padding: 6px 12px; font-size: .87rem; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item:hover { background: var(--surface-2); color: var(--text); }
+    .item.danger { color: var(--danger); }
+    .item .tag { float: right; font-size: .65rem; color: var(--muted); border: 1px solid var(--border-strong); border-radius: 5px; padding: 0 5px; margin-top: 3px; }
+    .opts { padding: 4px 12px 8px; display: grid; gap: 2px; }
+    .toggle { display: flex; align-items: center; gap: 10px; font-size: .84rem; padding: 5px 0; cursor: pointer; color: var(--text-2); }
+    .toggle input { appearance: none; width: 28px; height: 16px; border-radius: 999px; background: var(--border-strong); position: relative; cursor: pointer; transition: .2s; flex: none; margin: 0; }
+    .toggle input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: .2s; }
+    .toggle input:checked { background: var(--accent); }
+    .toggle input:checked::after { transform: translateX(12px); }
+    .opts label.f { font-size: .74rem; color: var(--muted); margin-top: 10px; display: block; }
+    .opts input[type=text], .opts select { width: 100%; font: inherit; font-size: .83rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; margin-top: 3px; }
+    .side-foot { margin-top: auto; padding: 14px 12px 2px; font-size: .72rem; color: var(--muted); line-height: 1.45; }
+
+    /* ───────── Main ───────── */
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100%; position: relative; }
+    .topbar { display: none; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    .icon-btn { background: none; border: none; border-radius: 8px; padding: 6px 9px; font-size: 1.1rem; }
+    .icon-btn:hover { background: var(--surface-2); }
+    .scroll { flex: 1; overflow-y: auto; scroll-behavior: smooth; }
+    .col { max-width: 720px; margin: 0 auto; padding: 36px 24px 20px; }
+
+    /* Landing state: everything centred like a start page */
+    .main.empty { justify-content: center; }
+    .main.empty .scroll { flex: none; overflow: visible; }
+    .main.empty .col { padding-bottom: 0; }
+    .hero { text-align: center; }
+    .hero .spark { color: var(--accent); font-size: 1.9rem; line-height: 1; }
+    .hero h2 { font-family: var(--serif); font-weight: 400; font-size: 2.35rem; margin: 12px 0 8px; letter-spacing: -.02em; color: var(--text); }
+    .hero p { color: var(--muted); margin: 0 0 6px; font-size: 1rem; }
+    .suggest { display: none; max-width: 720px; margin: 14px auto 0; padding: 0 24px; flex-wrap: wrap; justify-content: center; gap: 8px; }
+    .main.empty .suggest { display: flex; }
+    .sg { background: none; border: 1px solid var(--border-strong); border-radius: 999px; padding: 7px 14px; font-size: .84rem; color: var(--text-2); transition: .15s; }
+    .sg:hover { background: var(--surface); border-color: var(--accent); color: var(--accent); }
+    .main.empty .fine { display: none; }
+
+    /* ───────── Messages ───────── */
+    .msg { margin: 0 0 30px; animation: in .28s ease; }
+    @keyframes in { from { opacity: 0; transform: translateY(8px); } }
+    .msg.user { display: flex; justify-content: flex-end; }
+    .msg.user .bubble { background: var(--user-bubble); border-radius: 20px 20px 6px 20px; padding: 10px 16px; max-width: 82%; white-space: pre-wrap; word-break: break-word; font-size: .98rem; }
+
+    .answer { font-family: var(--serif); font-size: 1.06rem; line-height: 1.75; color: var(--text); word-break: break-word; }
+    .answer h3 { font-family: var(--serif); font-size: 1.18rem; font-weight: 600; margin: 26px 0 6px; letter-spacing: -.01em; }
+    .answer h3:first-child { margin-top: 2px; }
+    .answer p { margin: 0 0 12px; }
+    .answer ul { margin: 0 0 12px; padding-left: 1.3em; }
+    .answer li { margin: 4px 0; }
+    .cite { display: inline-flex; align-items: center; justify-content: center; min-width: 17px; height: 17px; padding: 0 4px; margin: 0 2px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font: 600 .66rem/1 var(--sans); vertical-align: 2px; letter-spacing: .01em; }
+    .callout { border: 1px solid var(--danger-border); background: var(--danger-bg); color: var(--text); border-radius: 14px; padding: 14px 16px; font-family: var(--sans); font-size: .97rem; line-height: 1.6; display: flex; gap: 12px; }
+    .callout .ic { color: var(--danger); font-size: 1.1rem; line-height: 1.5; }
+    .callout b { display: block; color: var(--danger); margin-bottom: 2px; }
+    .info { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 14px; padding: 14px 16px; font-family: var(--sans); font-size: .95rem; }
+
+    /* Sources */
+    .sources { margin-top: 22px; font-family: var(--sans); }
+    .sources .t { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+    .src-grid { display: grid; gap: 8px; }
+    .src { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); text-decoration: none; color: inherit; transition: .15s; }
+    .src:hover { border-color: var(--accent); box-shadow: var(--shadow); }
+    .src .cite { margin: 2px 0 0; flex: none; width: 26px; padding: 0; }
+    .main.empty .topbar { position: absolute; top: 0; left: 0; right: 0; border-bottom-color: transparent; }
+    .src .st { font-size: .86rem; font-weight: 500; line-height: 1.35; color: var(--text); }
+    .src .sd { font-size: .74rem; color: var(--muted); margin-top: 2px; }
+
+    /* Limitations + checks */
+    details.lim { margin-top: 16px; font-family: var(--sans); font-size: .84rem; color: var(--muted); }
+    details.lim summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px; padding: 3px 0; }
+    details.lim summary::-webkit-details-marker { display: none; }
+    details.lim summary::before { content: "›"; transition: transform .15s; display: inline-block; font-size: 1.05rem; line-height: 1; }
+    details.lim[open] summary::before { transform: rotate(90deg); }
+    details.lim ul { margin: 6px 0 0; padding-left: 1.2em; }
+    details.lim li { margin: 3px 0; }
+
+    .checks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; font-family: var(--sans); }
+    .chip { display: inline-flex; align-items: center; gap: 5px; font-size: .72rem; padding: 2px 9px 2px 7px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); }
+    .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .85; }
+    .chip.ok { color: var(--ok); } .chip.warn { color: var(--warn); } .chip.danger { color: var(--danger); } .chip.info { color: var(--info); }
+
+    .actions { display: flex; align-items: center; gap: 2px; margin-top: 10px; font-family: var(--sans); }
+    .actions button { background: none; border: none; font-size: .78rem; color: var(--muted); padding: 5px 9px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; }
+    .actions button:hover { background: var(--surface-2); color: var(--text); }
+    .actions .sp { color: var(--accent); margin-left: auto; font-size: .95rem; }
+    pre.json { background: var(--code-bg); color: var(--code-text); border-radius: 12px; padding: 14px; font-family: var(--mono); font-size: .76rem; line-height: 1.6; overflow: auto; max-height: 420px; margin: 10px 0 0; white-space: pre-wrap; word-break: break-word; }
+
+    .thinking { display: flex; align-items: center; gap: 12px; color: var(--muted); font-family: var(--sans); font-size: .93rem; }
+    .spark-spin { color: var(--accent); font-size: 1.15rem; animation: spin 2.4s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .shimmer { background: linear-gradient(90deg, var(--muted) 30%, var(--text) 50%, var(--muted) 70%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: sh 2s linear infinite; }
+    @keyframes sh { to { background-position: -200% 0; } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+    /* ───────── Composer ───────── */
+    .composer-wrap { padding: 0 24px 6px; flex: none; }
+    .main:not(.empty) .composer-wrap { background: linear-gradient(to top, var(--bg) 70%, transparent); padding-top: 6px; }
+    .composer { max-width: 720px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 24px; padding: 14px 14px 12px 20px; box-shadow: var(--shadow); transition: border-color .15s, box-shadow .15s; }
+    .composer:focus-within { border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong)); }
+    .composer textarea { width: 100%; border: none; outline: none !important; resize: none; background: none; color: var(--text); font: inherit; font-size: 1.02rem; line-height: 1.55; max-height: 200px; padding: 0; min-height: 28px; }
+    .composer textarea::placeholder { color: var(--muted); }
+    .comp-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+    .tool { display: inline-flex; align-items: center; gap: 6px; background: none; border: 1px solid var(--border-strong); border-radius: 999px; padding: 5px 13px 5px 11px; font-size: .82rem; color: var(--muted); transition: .15s; }
+    .tool:hover { background: var(--surface-2); color: var(--text); }
+    .tool[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+    .send { width: 36px; height: 36px; border-radius: 11px; border: none; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; transition: .15s; }
+    .send:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+    .send:disabled { background: var(--surface-2); color: var(--muted); opacity: .8; cursor: not-allowed; }
+    .fine { text-align: center; font-size: .72rem; color: var(--muted); margin: 8px 0 6px; }
+
+
+    /* ───────── Settings dialog ───────── */
+    .set-btn { display: flex; align-items: center; gap: 10px; }
+    .set-btn svg { flex: none; color: var(--muted); }
+    .set-btn .tag { margin-left: auto; float: none; color: var(--accent); border-color: var(--accent); }
+    dialog { border: 1px solid var(--border-strong); border-radius: 20px; background: var(--bg); color: var(--text); padding: 0; width: min(560px, calc(100vw - 28px)); max-height: min(720px, calc(100vh - 40px)); box-shadow: 0 24px 80px rgba(0,0,0,.35); overflow: hidden; }
+    dialog[open] { display: flex; flex-direction: column; animation: pop .18s ease; }
+    dialog::backdrop { background: rgba(20,19,18,.5); backdrop-filter: blur(3px); }
+    @keyframes pop { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+    .dlg-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px 8px; }
+    .dlg-head h3 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 1.35rem; letter-spacing: -.01em; }
+    .dlg-body { overflow-y: auto; padding: 4px 22px 14px; }
+    .dlg-body section { margin-top: 18px; }
+    .sec-t { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 8px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); cursor: pointer; margin-top: -1px; }
+    .sec-t + .row { border-radius: 14px 14px 0 0; }
+    .row:last-of-type { border-radius: 0 0 14px 14px; }
+    .sec-t + .row:last-of-type { border-radius: 14px; }
+    .row:has(+ .sub) { border-radius: 14px 14px 0 0 !important; }
+    .row:hover { background: color-mix(in srgb, var(--surface-2) 45%, var(--surface)); }
+    .rt b { display: block; font-size: .93rem; font-weight: 500; }
+    .rt small { display: block; font-size: .78rem; color: var(--muted); line-height: 1.45; margin-top: 2px; }
+    .sw { position: relative; width: 38px; height: 22px; flex: none; }
+    .sw input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+    .sw i { position: absolute; inset: 0; border-radius: 999px; background: var(--border-strong); transition: .2s; }
+    .sw i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: .2s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+    .sw input:checked + i { background: var(--accent); }
+    .sw input:checked + i::after { transform: translateX(16px); }
+    .sw input:focus-visible + i { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .sub { display: grid; gap: 14px; padding: 14px; border: 1px solid var(--border); border-top: none; border-radius: 0 0 14px 14px; background: var(--surface); transition: opacity .2s; }
+    .sub.off { opacity: .45; pointer-events: none; }
+    #researchFields { margin-top: 0; }
+    .field label { display: block; font-size: .82rem; font-weight: 500; margin-bottom: 5px; }
+    .field input[type=text], .field select { width: 100%; font: inherit; font-size: .92rem; color: var(--text); background: var(--bg); border: 1px solid var(--border-strong); border-radius: 10px; padding: 9px 12px; transition: .15s; }
+    .dlg-body section > .field { margin-bottom: 14px; padding: 0; }
+    .field input:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); outline: none; }
+    .field small { display: block; font-size: .75rem; color: var(--muted); margin-top: 5px; }
+    .dlg-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 22px; border-top: 1px solid var(--border); background: var(--sidebar); }
+    .btn-ghost { background: none; border: none; color: var(--muted); font-size: .86rem; padding: 8px 10px; border-radius: 8px; }
+    .btn-ghost:hover { color: var(--text); background: var(--surface-2); }
+    .btn-main { background: var(--accent); color: var(--accent-ink); border: none; font-weight: 600; font-size: .9rem; padding: 9px 22px; border-radius: 11px; }
+    .btn-main:hover { filter: brightness(1.08); }
+
+    @media (max-width: 860px) {
+      aside { position: fixed; z-index: 10; inset: 0 auto 0 0; transform: translateX(-100%); transition: transform .2s; box-shadow: 4px 0 24px rgba(0,0,0,.2); }
+      body.nav aside { transform: none; }
+      .topbar { display: flex; }
+      .hero h2 { font-size: 1.8rem; }
+      .col { padding: 22px 16px 12px; }
+      .composer-wrap, .suggest { padding-left: 14px; padding-right: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <aside id="sidebar">
+    <div class="brand"><span class="mark">✦</span> Women's Health</div>
+    <button class="new" id="newBtn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> New chat
+    </button>
+
+    <div class="group">
+      <div class="gl">Conditions</div>
+      <button class="item" data-preset="pcos">PCOS overview</button>
+      <button class="item" data-preset="fibroids">Uterine fibroids</button>
+      <button class="item" data-preset="pms">PMS &amp; PMDD</button>
+      <button class="item" data-preset="menopause">Menopause</button>
+      <button class="item" data-preset="endo_eval">Endometriosis evaluation</button>
+    </div>
+    <div class="group">
+      <div class="gl">Tools &amp; sources</div>
+      <button class="item" data-preset="cycle">Cycle calculator</button>
+      <button class="item" data-preset="medlineplus">MedlinePlus <span class="tag">API</span></button>
+      <button class="item" data-preset="europepmc">Europe PMC <span class="tag">API</span></button>
+      <button class="item" data-preset="trials">ClinicalTrials.gov <span class="tag">API</span></button>
+    </div>
+    <div class="group">
+      <div class="gl">Safety tests</div>
+      <button class="item danger" data-preset="urgent">Urgent symptoms</button>
+      <button class="item danger" data-preset="med_block">Medication guardrail</button>
+    </div>
+
+    <div class="group">
+      <button class="item set-btn" id="settingsBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        Settings <span class="tag" id="setBadge" hidden></span>
+      </button>
+    </div>
+
+    <div class="side-foot">Educational information only. Not a diagnosis or a substitute for medical care.</div>
+  </aside>
+
+  <div class="main empty" id="main">
+    <div class="topbar">
+      <button class="icon-btn" id="menuBtn" aria-label="Menu">☰</button>
+      <strong style="font-family:var(--serif);font-weight:500">Women's Health</strong>
+    </div>
+
+    <div class="scroll" id="scroll">
+      <div class="col" id="thread">
+        <div class="hero" id="hero">
+          <div class="spark">✦</div>
+          <h2>How can I help today?</h2>
+          <p>Evidence-grounded answers with verified citations.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="composer-wrap">
+      <form class="composer" id="form">
+        <textarea id="query" rows="1" placeholder="Ask about women's health…" autofocus></textarea>
+        <div class="comp-row">
+          <button type="button" class="tool" id="researchBtn" aria-pressed="false" title="Send to Groq/Gemini + PubMed, Europe PMC, MedlinePlus (30–90s)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg> Deep research
+          </button>
+          <button type="submit" class="send" id="sendBtn" aria-label="Send" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+        </div>
+      </form>
+      <p class="fine" id="fine">Enter to send · Shift+Enter for a new line</p>
+    </div>
+
+    <div class="suggest" id="suggest">
+      <button class="sg" data-preset="pcos">What is PCOS?</button>
+      <button class="sg" data-preset="menopause">Managing hot flashes</button>
+      <button class="sg" data-preset="cycle">Calculate my cycle</button>
+      <button class="sg" data-preset="trials">Find clinical trials</button>
+      <button class="sg" data-preset="endo_eval">How is endometriosis diagnosed?</button>
+    </div>
+  </div>
+
+  <dialog id="settings" aria-labelledby="setTitle">
+    <div class="dlg-head">
+      <h3 id="setTitle">Settings</h3>
+      <button type="button" class="icon-btn" id="setClose" aria-label="Close">✕</button>
+    </div>
+    <div class="dlg-body">
+      <section>
+        <div class="sec-t">Conversation</div>
+        <label class="row">
+          <span class="rt"><b>Remember context</b><small>Keep earlier turns so follow-up questions and multi-step calculations work. Cleared on New chat.</small></span>
+          <span class="sw"><input type="checkbox" id="remember" checked /><i></i></span>
+        </label>
+        <label class="row">
+          <span class="rt"><b>Development evidence</b><small>Include unverified fixture evidence for testing. Leave off for approved sources only.</small></span>
+          <span class="sw"><input type="checkbox" id="devEvidence" checked /><i></i></span>
+        </label>
+      </section>
+
+      <section>
+        <div class="sec-t">External research</div>
+        <label class="row">
+          <span class="rt"><b>Biomedical APIs</b><small>Let a query search MedlinePlus, PubMed, Europe PMC or ClinicalTrials.gov. Only the terms below are sent.</small></span>
+          <span class="sw"><input type="checkbox" id="allowResearch" /><i></i></span>
+        </label>
+        <div class="sub" id="researchFields">
+          <div class="field">
+            <label for="researchSource">Source</label>
+            <select id="researchSource">
+              <option value="">Auto-detect from question</option>
+              <option value="medlineplus">NIH MedlinePlus</option>
+              <option value="pubmed">NCBI PubMed</option>
+              <option value="europepmc">Europe PMC</option>
+              <option value="clinical_trials">ClinicalTrials.gov</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="researchQuery">Search terms</label>
+            <input type="text" id="researchQuery" placeholder="e.g. Polycystic Ovary Syndrome" />
+            <small>Non-identifying terms only. Don't include personal details.</small>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-t">Cycle calculator</div>
+        <div class="field">
+          <label for="periodStarts">Period start dates</label>
+          <input type="text" id="periodStarts" placeholder="2026-08-01, 2026-09-05, 2026-10-08" />
+          <small>Oldest to newest, comma-separated, YYYY-MM-DD.</small>
+        </div>
+        <div class="field">
+          <label for="asOf">Reference date</label>
+          <input type="text" id="asOf" placeholder="2026-11-06" />
+          <small>Your local "today" for the calculation.</small>
+        </div>
+      </section>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn-ghost" id="setReset">Reset to defaults</button>
+      <button type="button" class="btn-main" id="setDone">Done</button>
+    </div>
+  </dialog>
+
+  <script>
+    let currentSessionId = null;
+    let busy = false;
+    let deep = false;
+    const $ = (id) => document.getElementById(id);
+
+    const presets = {
+      pcos: { q: 'What is PCOS, what are its symptoms, and what lifestyle habits help?' },
+      fibroids: { q: 'What are uterine fibroids, what are their symptoms, and what lifestyle habits help?' },
+      pms: { q: 'What is PMS and PMDD, what are the symptoms, and what lifestyle habits help?' },
+      menopause: { q: 'What is perimenopause and menopause, what are the symptoms, and how to manage hot flashes?' },
+      endo_eval: { q: 'How is endometriosis diagnosed and evaluated?' },
+      cycle: { q: 'Calculate my cycle intervals', starts: '2026-08-01, 2026-09-05, 2026-10-08', asOf: '2026-11-06' },
+      medlineplus: { q: 'Search MedlinePlus for PCOS overview', allowResearch: true, source: 'medlineplus', rq: 'Polycystic Ovary Syndrome' },
+      europepmc: { q: 'Search Europe PMC for endometriosis review', allowResearch: true, source: 'europepmc', rq: 'endometriosis lifestyle review' },
+      trials: { q: 'Find recruiting clinical trials for PCOS', allowResearch: true, source: 'clinical_trials', rq: 'Polycystic Ovary Syndrome exercise' },
+      urgent: { q: 'I might be pregnant and have severe pelvic pain and fainted.' },
+      med_block: { q: 'Should I stop taking my prescribed metformin for PCOS?' }
+    };
+
+    function el(tag, cls, text) {
+      const e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text != null) e.textContent = text;
+      return e;
+    }
+
+    function chipClass(t) {
+      t = String(t).toUpperCase();
+      if (/BLOCK|URGENT|EMERGENCY|REFUS|FAIL|UNAVAILABLE|ESCALAT/.test(t)) return 'danger';
+      if (/WARN|UNVERIFIED|REJECT|PARTIAL|DEVELOPMENT|LIMIT/.test(t)) return 'warn';
+      if (/VERIFIED|COMPLETE|OK|SUCCESS|RETRIEV|CITED|PASSED|CHECKED/.test(t)) return 'ok';
+      return 'info';
+    }
+    function prettyEvent(t) {
+      t = String(t);
+      if (!/^[A-Z0-9_]+$/.test(t)) return t;
+      const s = t.toLowerCase().replace(/_/g, ' ').replace(/\b(\d+)$/, '$1%');
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
+    function scrollDown() { const s = $('scroll'); s.scrollTop = s.scrollHeight; }
+    function setEmpty(on) { $('main').classList.toggle('empty', on); }
+
+    function addUser(text) {
+      setEmpty(false);
+      $('hero').hidden = true;
+      const m = el('div', 'msg user');
+      m.appendChild(el('div', 'bubble', text));
+      $('thread').appendChild(m);
+      scrollDown();
+    }
+
+    function addThinking(label) {
+      const m = el('div', 'msg bot');
+      const t = el('div', 'thinking');
+      t.append(el('span', 'spark-spin', '✦'), el('span', 'shimmer', label + '…'));
+      m.appendChild(t);
+      $('thread').appendChild(m);
+      scrollDown();
+      return m;
+    }
+
+    /* ── Answer rendering ── */
+    function inline(parent, text) {
+      text.split(/(\[[A-Za-z]+\d+(?:\s*,\s*[A-Za-z]*\d+)*\])/g).forEach((p) => {
+        if (/^\[[A-Za-z]+\d+/.test(p)) p.slice(1, -1).split(',').forEach(c => parent.appendChild(el('span', 'cite', c.trim())));
+        else if (p) parent.appendChild(document.createTextNode(p));
+      });
+    }
+    function bullets(parent, lines) {
+      const ul = el('ul');
+      lines.forEach(l => { const li = el('li'); inline(li, l.replace(/^[-•*]\s+/, '')); ul.appendChild(li); });
+      parent.appendChild(ul);
+    }
+    function domain(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return u; } }
+
+    function renderAnswer(body, text, events) {
+      const root = el('div', 'answer');
+      const evt = (events || []).join(' ').toUpperCase();
+      let limitations = [], sources = [];
+      const blocks = String(text).split(/\n{2,}/).map(b => b.trim()).filter(Boolean);
+
+      blocks.forEach((blk, i) => {
+        const lines = blk.split('\n');
+        const first = lines[0].trim();
+        if (/^Limitations:?$/i.test(first)) { limitations = lines.slice(1).map(l => l.replace(/^[-•*]\s*/, '')); return; }
+        if (/^Sources:?$/i.test(first)) {
+          const rest = lines.slice(1);
+          for (let k = 0; k < rest.length; k++) {
+            const m = rest[k].match(/^\[([^\]]+)\]\s*(.*)$/);
+            if (m) sources.push({ id: m[1], title: m[2], url: /^https?:\/\//.test(rest[k + 1] || '') ? rest[++k] : '' });
+          }
+          return;
+        }
+        if (/^Potential acute medical emergency|^If you .*emergency/i.test(blk) || /URGENT|EMERGENCY/.test(evt) && i === 0) {
+          const c = el('div', 'callout');
+          c.appendChild(el('span', 'ic', '⚠'));
+          const d = el('div'); d.appendChild(el('b', null, 'Seek urgent care')); inline(d, blk); c.appendChild(d);
+          root.appendChild(c); return;
+        }
+        // heading + paragraph
+        const isHeading = lines.length > 1 && first.length < 48 && !/[.:;!?\]]$/.test(first) && !/^[\[\-•*\d]/.test(first);
+        if (isHeading) { root.appendChild(el('h3', null, first)); }
+        const bodyLines = isHeading ? lines.slice(1) : lines;
+        if (bodyLines.every(l => /^[-•*]\s+/.test(l))) bullets(root, bodyLines);
+        else { const p = el('p'); inline(p, bodyLines.join('\n')); root.appendChild(p); }
+      });
+      body.appendChild(root);
+
+      if (sources.length) {
+        const s = el('div', 'sources');
+        s.appendChild(el('div', 't', 'Sources'));
+        const g = el('div', 'src-grid');
+        sources.forEach((x) => {
+          const a = el(x.url ? 'a' : 'div', 'src');
+          if (x.url) { a.href = x.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+          a.appendChild(el('span', 'cite', x.id));
+          const d = el('div');
+          d.appendChild(el('div', 'st', x.title));
+          if (x.url) d.appendChild(el('div', 'sd', domain(x.url)));
+          a.appendChild(d); g.appendChild(a);
+        });
+        s.appendChild(g); body.appendChild(s);
+      }
+      if (limitations.length) {
+        const d = el('details', 'lim');
+        d.appendChild(el('summary', null, 'Limitations & notes (' + limitations.length + ')'));
+        const ul = el('ul'); limitations.forEach(l => ul.appendChild(el('li', null, l)));
+        d.appendChild(ul); body.appendChild(d);
+      }
+    }
+
+    function fillBot(m, text, events, json) {
+      m.replaceChildren();
+      renderAnswer(m, text, events);
+      if (events && events.length) {
+        const c = el('div', 'checks');
+        events.forEach(ev => c.appendChild(el('span', 'chip ' + chipClass(ev), prettyEvent(ev))));
+        m.appendChild(c);
+      }
+      const act = el('div', 'actions');
+      const copy = el('button', null, 'Copy');
+      copy.onclick = async () => {
+        try { await navigator.clipboard.writeText(text); copy.textContent = 'Copied ✓'; } catch (e) { copy.textContent = 'Failed'; }
+        setTimeout(() => (copy.textContent = 'Copy'), 1300);
+      };
+      act.appendChild(copy);
+      let pre = null;
+      if (json) {
+        pre = el('pre', 'json', JSON.stringify(json, null, 2)); pre.hidden = true;
+        const tog = el('button', null, 'View JSON');
+        tog.onclick = () => { pre.hidden = !pre.hidden; tog.textContent = pre.hidden ? 'View JSON' : 'Hide JSON'; scrollDown(); };
+        act.appendChild(tog);
+      }
+      act.appendChild(el('span', 'sp', '✦'));
+      m.appendChild(act);
+      if (pre) m.appendChild(pre);
+      scrollDown();
+    }
+
+    function setBusy(on) { busy = on; $('sendBtn').disabled = on || !$('query').value.trim(); $('researchBtn').disabled = on; }
+
+    function readOptions() {
+      const startsRaw = $('periodStarts').value.trim();
+      return {
+        session_id: currentSessionId,
+        allow_session_context: $('remember').checked,
+        development_evidence: $('devEvidence').checked,
+        allow_external_research: $('allowResearch').checked,
+        research_source: $('researchSource').value || null,
+        research_query: $('researchQuery').value.trim() || null,
+        period_start_dates: startsRaw ? startsRaw.split(',').map(s => s.trim()).filter(Boolean) : null,
+        as_of: $('asOf').value.trim() || null
+      };
+    }
+
+    async function send(text) {
+      text = (text || '').trim();
+      if (!text || busy) return;
+      addUser(text);
+      $('query').value = ''; autosize();
+      setBusy(true);
+      if (deep) return research(text);
+      const m = addThinking('Retrieving evidence and verifying citations');
+      try {
+        const res = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: text, ...readOptions() }) });
+        const data = await res.json();
+        currentSessionId = data.session_id || currentSessionId;
+        fillBot(m, data.rendered || data.error || 'No response.', data.events, data.response);
+      } catch (e) {
+        fillBot(m, 'The request failed. Is the server still running?', ['REQUEST_FAILED']);
+      }
+      setBusy(false);
+    }
+
+    async function research(text) {
+      const m = addThinking('Researching: planning, searching and verifying sources (30–90s)');
+      try {
+        const res = await fetch('/api/research', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: text, consent: true }) });
+        const data = await res.json();
+        const r = data.report;
+        fillBot(m, data.rendered || data.error || 'No result.', r ? [
+          'RESEARCH_' + String(r.status).toUpperCase(),
+          (r.key_findings || []).length + ' verified findings',
+          (r.sources || []).length + ' sources',
+          r.rejected_findings + ' rejected'] : ['RESEARCH_UNAVAILABLE'], r || null);
+      } catch (e) {
+        fillBot(m, 'Research request failed.', ['RESEARCH_UNAVAILABLE']);
+      }
+      setBusy(false);
+    }
+
+    async function newChat() {
+      if (currentSessionId) {
+        try { await fetch('/api/forget', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: currentSessionId }) }); } catch (e) {}
+      }
+      currentSessionId = null;
+      document.querySelectorAll('#thread .msg').forEach(n => n.remove());
+      $('hero').hidden = false;
+      setEmpty(true);
+      document.body.classList.remove('nav');
+      $('query').focus();
+    }
+
+    function usePreset(name) {
+      const p = presets[name]; if (!p) return;
+      $('allowResearch').checked = !!p.allowResearch;
+      $('researchSource').value = p.source || '';
+      $('researchQuery').value = p.rq || '';
+      $('periodStarts').value = p.starts || '';
+      $('asOf').value = p.asOf || '';
+      document.body.classList.remove('nav');
+      syncSettings();
+      setDeep(false);
+      send(p.q);
+    }
+
+    function setDeep(on) {
+      deep = on;
+      $('researchBtn').setAttribute('aria-pressed', on);
+      $('query').placeholder = on ? 'Ask a research question…' : "Ask about women's health…";
+      $('fine').textContent = on ? 'Deep research sends your question to external services. Leave out personal details.' : 'Enter to send · Shift+Enter for a new line';
+    }
+
+    function autosize() {
+      const q = $('query'); q.style.height = 'auto'; q.style.height = Math.min(q.scrollHeight, 200) + 'px';
+      $('sendBtn').disabled = busy || !q.value.trim();
+    }
+
+
+    /* ── Settings dialog ── */
+    const dlg = $('settings');
+    const defaults = { remember: true, devEvidence: true, allowResearch: false, researchSource: '', researchQuery: '', periodStarts: '', asOf: '' };
+    function syncSettings() {
+      $('researchFields').classList.toggle('off', !$('allowResearch').checked);
+      const n = ['allowResearch', 'periodStarts', 'asOf'].filter(id => $(id).type === 'checkbox' ? $(id).checked : $(id).value.trim()).length
+              + (!$('remember').checked ? 1 : 0) + (!$('devEvidence').checked ? 1 : 0);
+      $('setBadge').hidden = !n; $('setBadge').textContent = n + ' changed';
+    }
+    function resetSettings() {
+      Object.entries(defaults).forEach(([id, v]) => { const e = $(id); if (e.type === 'checkbox') e.checked = v; else e.value = v; });
+      syncSettings();
+    }
+    $('settingsBtn').addEventListener('click', () => { document.body.classList.remove('nav'); syncSettings(); dlg.showModal(); });
+    $('setClose').addEventListener('click', () => dlg.close());
+    $('setDone').addEventListener('click', () => dlg.close());
+    $('setReset').addEventListener('click', resetSettings);
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+    dlg.addEventListener('input', syncSettings);
+    dlg.addEventListener('change', syncSettings);
+    syncSettings();
+
+    $('form').addEventListener('submit', (e) => { e.preventDefault(); send($('query').value); });
+    $('query').addEventListener('input', autosize);
+    $('query').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send($('query').value); } });
+    $('researchBtn').addEventListener('click', () => setDeep(!deep));
+    $('newBtn').addEventListener('click', newChat);
+    $('menuBtn').addEventListener('click', () => document.body.classList.toggle('nav'));
+    $('scroll').addEventListener('click', () => document.body.classList.remove('nav'));
+    document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => usePreset(b.dataset.preset)));
+  </script>
+</body>
+</html>
