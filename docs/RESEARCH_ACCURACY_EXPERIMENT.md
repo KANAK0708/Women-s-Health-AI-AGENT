@@ -1,5 +1,43 @@
 # Research accuracy experiment — 19 November 2026
 
+## Capacity gate after the clinical packet (19 November 2026, 21:15 IST)
+
+Following the agreed restart plan, tested one tiny structured-output request per
+configured provider before attempting another clean research baseline. Retries
+were disabled and the request timeout was 20 seconds. The probe used synthetic
+`ready=true` input, not a medical question or patient information. Only sanitized
+status/timing information was recorded; no credentials or raw provider errors
+were saved in the report.
+
+| Provider/model | Outcome | Seconds | Interpretation |
+| --- | --- | ---: | --- |
+| `groq:openai/gpt-oss-120b` | Structured response succeeded | 0.87 | Small-call availability only; sustained extraction throughput remains unmeasured |
+| `gemini:gemini-3.5-flash` | `GoogleRateLimitError` | 2.14 | Quota error referenced a daily limit; extraction capacity gate failed |
+
+Gemini's error also supplied a 16-second retry hint. That hint does not establish
+that daily capacity will become available after 16 seconds, so no repeated
+retries or multi-minute baseline runs were launched. Both `GOOGLE_API_KEY` and
+`GEMINI_API_KEY` are present; the installed client reports using `GOOGLE_API_KEY`.
+No key values or configuration were changed.
+
+The full offline suite passed: **288 tests, 2 skipped**. There is no new live
+safety result from this capacity probe; the most recent seven-case research
+safety collection passed 7/7. The research pipeline, verification rules, safety
+rules, eval cases, held-out set and committed `research_latest.json` are
+unchanged. No candidate was implemented or adopted, and no before/after accuracy
+claim can be made.
+
+The sanitized local probe record is `/tmp/prompt1_capacity_check.json`. Resume
+with another small capacity check when the configured Gemini quota/allocation is
+available, then run the clean repeated baseline and measured improvement stages
+in the order below. A model/provider configuration change would need its own
+fresh baseline; historical scores would not be directly comparable.
+
+The historical sections below describe earlier attempts. Prompts 2–4 have since
+been completed (`6a762e8`, `afb6746`, `18653e6`); the clinical packet should be
+refreshed after any subsequently adopted pipeline changes, not treated as a
+clinical approval of those changes.
+
 ## Restart after checkpoint (19 November 2026, 19:44–19:53 IST)
 
 Existing code and documentation were saved separately in checkpoint commit
