@@ -466,6 +466,11 @@
         if (isHeading) { root.appendChild(el('h3', null, first)); }
         const bodyLines = isHeading ? lines.slice(1) : lines;
         if (bodyLines.every(l => /^[-•*]\s+/.test(l))) bullets(root, bodyLines);
+        else if (bodyLines.length > 1 && bodyLines.slice(1).every(l => /^[-•*]\s+/.test(l))) {
+          // An intro line followed by a list ("Here's what you've told me:" + bullets).
+          const p = el('p'); inline(p, bodyLines[0]); root.appendChild(p);
+          bullets(root, bodyLines.slice(1));
+        }
         else { const p = el('p'); inline(p, bodyLines.join('\n')); root.appendChild(p); }
       });
       body.appendChild(root);

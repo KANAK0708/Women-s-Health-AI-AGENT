@@ -22,6 +22,10 @@ from health_tools.pending_tasks import (
     new_cycle_task, request_input,
 )
 from health_tools.conversation import conversational_reply
+from health_tools.symptom_intake import (
+    QUESTIONS as INTAKE_QUESTIONS, SCHEMA_VERSION as INTAKE_SCHEMA, IntakeTransition,
+    advance_intake, detect_complaint, single_turn_prompt, start_intake,
+)
 from health_tools.workflow import Orchestrator, SafetyDecision, ToolPolicy, WorkflowResult, select_intent
 
 
@@ -30,7 +34,8 @@ class HealthApplication:
                  medlineplus_search=None, europepmc_search=None,
                  clinical_trials_search=None, guideline_search=None,
                  policy=None, claim_verifier=None,
-                 pending_task_store: PendingTaskStore | None = None, allow_unverified_for_development=None):
+                 pending_task_store: PendingTaskStore | None = None, allow_unverified_for_development=None,
+                 intake_store=None):
         self.store = store if store is not None else get_session_store()
         self.policy = policy or ToolPolicy()
         self._retrieve_callback = retrieve
@@ -42,12 +47,15 @@ class HealthApplication:
         self._guideline_search = guideline_search
         self._claim_verifier = claim_verifier
         self.pending_tasks = pending_task_store if pending_task_store is not None else InMemoryPendingTaskStore()
+        # Symptom-intake state is kept apart from cycle-calculation tasks.
+        self.intakes = intake_store if intake_store is not None else InMemoryPendingTaskStore()
         self._pending_store_failed = False
         self.allow_unverified_for_development = development_evidence_enabled(allow_unverified_for_development)
 
     def _drop_pending(self, session_id):
         try:
             self.pending_tasks.delete(session_id)
+            self.intakes.delete(session_id)
             return True
         except Exception:
             # Do not allow a later confirmation to reuse state after an outage.
@@ -69,6 +77,85 @@ class HealthApplication:
         # Task I/O has its own bounded turn count. It does not consume the two
         # medical-context clarification turns owned by ContextTracker.
         return WorkflowResult(response, ("SAFETY_CHECKED", transition.event))
+
+    @staticmethod
+    def _intake_response(transition: IntakeTransition):
+        from uuid import uuid4
+        kind, disposition = {
+            "ask": ("clarification", "educational"),
+            "cancel": ("clarification", "educational"),
+            "summary": ("education", "routine_review"),
+            "urgent": ("urgent_guidance", "emergency"),
+        }[transition.action]
+        limitations = []
+        if transition.action in {"summary", "urgent"}:
+            limitations = [
+                "This is not a diagnosis. Only a clinician who can examine you can tell what is causing your symptoms.",
+                "Development build: the symptom questions, red-flag rules and possible causes are pending clinician review.",
+            ]
+        response = EducationalResponse(
+            request_id=f"req-{uuid4().hex[:10]}", topic=transition.topic or "Symptom check",
+            response_type=kind, disposition=disposition, answer=transition.message,
+            questions=[transition.message] if transition.action == "ask" else [],
+            next_steps=list(transition.next_steps), limitations=limitations,
+            protocol_id=transition.protocol_id, system_version="symptom-intake-v0.1",
+        ).model_dump(mode="json")
+        # Intake turns have their own bounded count and don't use the two
+        # medical-context clarification turns owned by ContextTracker.
+        return WorkflowResult(response, ("SAFETY_CHECKED", transition.event))
+
+    def _intake_step(self, query, session, turn, decision, *, now):
+        """Guided symptom questions, one at a time. Returns a result or None to continue normally."""
+        key = session.session_id
+        if (decision.action != "proceed"
+                or turn.context.is_adult == "no"
+                or (turn.context.age is not None and turn.context.age < 18)):
+            self.intakes.delete(key)  # Safety responses always win and end any intake.
+            return None
+        intent = select_intent(query)
+        if not session.allow_session_context:
+            self.intakes.delete(key)
+            complaint = detect_complaint(query) if intent == "education" else None
+            if complaint is None:
+                return None
+            transition = start_intake(key, session.expires_at, complaint, query)
+            if transition.action == "ask":
+                # No memory between turns: ask for everything in one message instead.
+                transition = IntakeTransition("ask", None, single_turn_prompt(complaint, query), "INTAKE_SINGLE_TURN")
+            return self._intake_response(transition)
+
+        self.intakes.purge_expired(now=now)
+        intake = self.intakes.get(key, now=now)
+        if intake is not None and (intake.session_id != key or getattr(intake, "schema_version", None) != INTAKE_SCHEMA):
+            self.intakes.delete(key)
+            intake = None
+        if intake is not None:
+            acknowledgement = conversational_reply(query)
+            if acknowledgement and intake.asking:
+                return self._intake_response(IntakeTransition(
+                    "ask", intake, f"{acknowledgement.split('?')[0].split('.')[0]}. To keep going: {INTAKE_QUESTIONS[intake.asking]}",
+                    "INTAKE_CONVERSATION_ACKNOWLEDGED"))
+            transition = advance_intake(intake, query)
+            if transition.event == "INTAKE_REASKED" and intent != "education":
+                transition = IntakeTransition("topic_change", None, "", "INTAKE_TOPIC_CHANGE")  # e.g. a calculator request
+            if transition.action == "ask":
+                self.intakes.save(transition.intake, now=now)
+                return self._intake_response(transition)
+            self.intakes.delete(key)
+            if transition.action == "topic_change":
+                return None
+        else:
+            if intent != "education" or self.pending_tasks.get(key, now=now) is not None:
+                return None
+            complaint = detect_complaint(query)
+            if complaint is None:
+                return None
+            transition = start_intake(key, session.expires_at, complaint, query)
+            if transition.action == "ask":
+                self.intakes.save(transition.intake, now=now)
+        if transition.action == "summary" and transition.topic:
+            turn.context.active_topic = transition.topic  # so "tell me more" follow-ups have a topic
+        return self._intake_response(transition)
 
     def _pending_step(self, query, session, turn, decision, tool_inputs, *, now):
         """Return an optional response and possibly confirmed tool inputs."""
@@ -275,8 +362,10 @@ class HealthApplication:
             try:
                 if self._pending_store_failed:
                     raise RuntimeError("Pending task flow disabled after storage failure")
-                pending_result, routed_query, routed_inputs, task_events = self._pending_step(
-                    query, session, turn, decision, tool_inputs, now=current)
+                pending_result = self._intake_step(query, session, turn, decision, now=current)
+                if pending_result is None:
+                    pending_result, routed_query, routed_inputs, task_events = self._pending_step(
+                        query, session, turn, decision, tool_inputs, now=current)
             except Exception:
                 self._pending_store_failed = True
                 # A pending-store outage must never replace an urgent/scope
