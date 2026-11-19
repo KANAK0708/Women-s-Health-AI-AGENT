@@ -1,4 +1,4 @@
-# Tools orchestration v0.3.2
+# Tools orchestration v0.3.3
 
 This is the tools owner's first controlled workflow. It builds on the shared
 contract and consumes the teammate's existing retrieval interface. It does not
@@ -41,6 +41,18 @@ they also ask for clarification. Explicit overview requests and a bare topic
 choice such as `PCOS` select definition, symptoms, and lifestyle sections, while
 `everything about PCOS symptoms` remains symptoms-only. This is bounded English
 reference handling, not general pronoun resolution or typo correction.
+
+Calculator explanations are separate from execution requests. `How does cycle
+calculation work?` gives software-use instructions without collecting dates or
+running a tool. A mixed question such as `what are pcos and how does cycle
+calculation works?` retrieves the PCOS portion and appends a separate calculator
+explanation. Medical passages remain cited and verified; software arithmetic
+instructions are not presented as clinical evidence. In strict mode, absent
+approved PCOS evidence is stated while the software explanation is still shown.
+
+Date-shaped replies, including invalid non-ISO formats, never go to medical
+retrieval. Active tasks request correction; expired or missing tasks explain how
+to restart. Input interpretation and date-order guessing are not expanded.
 
 ## Focused answers
 

@@ -136,6 +136,8 @@ def filter_eligible_sources(
     allow_unverified_for_development: bool = False,
 ) -> dict[str, SourceMetadata]:
     """Return a mapping of source_id -> SourceMetadata for approved, current, non-superseded sources."""
+    if type(allow_unverified_for_development) is not bool:
+        raise ValueError("Development evidence permission must be a boolean")
     today = reference_date or date.today()
     eligible: dict[str, SourceMetadata] = {}
 

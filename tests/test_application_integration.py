@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class ApplicationIntegrationTests(unittest.TestCase):
     def test_real_education_retrieval_and_schema(self):
-        app = HealthApplication()
+        app = HealthApplication(allow_unverified_for_development=True)
         result, session = app.process("What is PCOS and what are its symptoms?", allow_session_context=True)
         response = EducationalResponse.model_validate(result.response)
         self.assertEqual(response.response_type.value, "education")
@@ -57,7 +57,7 @@ class ApplicationIntegrationTests(unittest.TestCase):
         research.assert_not_called()
 
     def test_followups_recorded_and_bounded_by_real_memory(self):
-        app = HealthApplication()
+        app = HealthApplication(allow_unverified_for_development=True)
         session_id = None
         for expected in ("clarification", "clarification", "abstention"):
             result, session = app.process("What about exercise?", session_id=session_id,
@@ -70,7 +70,7 @@ class ApplicationIntegrationTests(unittest.TestCase):
         self.assertEqual(result.response["response_type"], "education")
 
     def test_opt_out_and_deletion(self):
-        app = HealthApplication()
+        app = HealthApplication(allow_unverified_for_development=True)
         _, session = app.process("I am 25 years old. What is PCOS?", allow_session_context=True)
         self.assertEqual(session.context.age, 25)
         sid = session.session_id
@@ -81,7 +81,7 @@ class ApplicationIntegrationTests(unittest.TestCase):
         self.assertIsNone(app.store.get_session(sid))
 
     def test_expired_session_starts_fresh(self):
-        app = HealthApplication()
+        app = HealthApplication(allow_unverified_for_development=True)
         now = datetime.now(timezone.utc)
         _, previous = app.process("I am 25 years old. What is PCOS?", now=now,
                                    allow_session_context=True)
@@ -125,7 +125,7 @@ class ApplicationIntegrationTests(unittest.TestCase):
             (["--query", "Find PCOS research"], "May I search PubMed"),
         ):
             with self.subTest(args=args):
-                run = subprocess.run([sys.executable, "main.py", *args, "--json"],
+                run = subprocess.run([sys.executable, "main.py", *args, "--json", "--development-evidence"],
                                      cwd=ROOT, capture_output=True, text=True, timeout=20)
                 self.assertEqual(run.returncode, 0, run.stderr)
                 data = json.loads(run.stdout)
@@ -133,7 +133,7 @@ class ApplicationIntegrationTests(unittest.TestCase):
                 self.assertIn(expected, data["answer"])
 
     def test_interactive_forget_and_exit(self):
-        run = subprocess.run([sys.executable, "main.py", "--remember"], cwd=ROOT,
+        run = subprocess.run([sys.executable, "main.py", "--remember", "--development-evidence"], cwd=ROOT,
                              input="What is PCOS?\n/forget\n/quit\n", capture_output=True,
                              text=True, timeout=20)
         self.assertEqual(run.returncode, 0, run.stderr)

@@ -6,7 +6,8 @@ from .workflow import Orchestrator, ToolPolicy
 
 
 def create_upstream_orchestrator(*, safety_check, policy: ToolPolicy | None = None,
-                                 manifest_path: Path | None = None) -> Orchestrator:
+                                 manifest_path: Path | None = None,
+                                 allow_unverified_for_development=None) -> Orchestrator:
     """Reuse HybridRetrievalEngine; never create a second clinical registry.
 
     The caller must supply a safety policy returning SafetyDecision, process the
@@ -18,7 +19,8 @@ def create_upstream_orchestrator(*, safety_check, policy: ToolPolicy | None = No
     from app.retrieval.engine import HybridRetrievalEngine
     from app.schemas.evidence import EducationalCategory
 
-    engine = HybridRetrievalEngine(manifest_path=manifest_path)
+    engine = HybridRetrievalEngine(manifest_path=manifest_path,
+                                  allow_unverified_for_development=allow_unverified_for_development)
 
     def retrieve(query, **kwargs):
         if "category" in kwargs:

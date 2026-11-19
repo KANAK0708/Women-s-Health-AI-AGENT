@@ -18,8 +18,14 @@ from app.retrieval.filters import (
     filter_eligible_sources,
     validate_educational_query_scope,
 )
-from app.retrieval.pg_vector_engine import PgVectorHybridEngine, get_retrieval_engine
 from app.retrieval.reranker import ScoredPassage, rerank_passages
+
+
+def __getattr__(name):
+    if name in {"PgVectorHybridEngine", "get_retrieval_engine"}:
+        from app.retrieval import pg_vector_engine
+        return getattr(pg_vector_engine, name)
+    raise AttributeError(name)
 
 __all__ = [
     "GuardrailedEducationalSearch",

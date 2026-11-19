@@ -124,7 +124,7 @@ class AnswerSelectionTests(unittest.TestCase):
         self.assertNotIn("PCOS", unrelated.retrieval_query)
 
     def test_real_followup_uses_consented_topic_and_verifies_answer(self):
-        app = HealthApplication()
+        app = HealthApplication(allow_unverified_for_development=True)
         _, session = app.process("What is PCOS?", allow_session_context=True)
         result, session = app.process("What about exercise?", session_id=session.session_id)
         self.assertEqual(result.response["response_type"], "education")
@@ -133,7 +133,7 @@ class AnswerSelectionTests(unittest.TestCase):
         self.assertIn("CLAIM_VERIFICATION_PASSED_100", session.audit_codes)
 
     def test_real_symptoms_request_has_no_definition_or_lifestyle(self):
-        result, session = HealthApplication().process("What are PCOS symptoms?")
+        result, session = HealthApplication(allow_unverified_for_development=True).process("What are PCOS symptoms?")
         self.assertEqual(result.response["response_type"], "education")
         self.assertEqual(result.response["what_it_is"], "")
         self.assertEqual(result.response["prevention_and_lifestyle"], [])
@@ -144,7 +144,7 @@ class AnswerSelectionTests(unittest.TestCase):
     def test_followup_after_optout_or_deletion_asks_for_topic(self):
         for remembered in (False, True):
             with self.subTest(remembered=remembered):
-                app = HealthApplication()
+                app = HealthApplication(allow_unverified_for_development=True)
                 _, session = app.process("What is PCOS?", allow_session_context=remembered)
                 sid = session.session_id
                 if remembered:

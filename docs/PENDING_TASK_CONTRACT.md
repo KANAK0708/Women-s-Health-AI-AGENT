@@ -30,6 +30,12 @@ Only explicit ISO dates and simple date lists/labels are recognized. Slash dates
 missing years, relative dates, and mixed narratives are not guessed. The display
 asks users to confirm starts of separate periods rather than spotting.
 
+An explanation of how the calculator works does not start a pending task. Only
+an execution request, such as `calculate cycle intervals`, starts collection.
+Invalid date-shaped replies stay in correction while a task is active. When no
+task exists (including after expiry), the service gives restart instructions;
+it never treats a standalone date as a request for medical evidence.
+
 Before confirmation, a date list replaces the entire proposed start list; it is
 never implicitly appended. `as of YYYY-MM-DD` changes just the reference date.
 Every correction requires a new confirmation. A premature yes cannot substitute

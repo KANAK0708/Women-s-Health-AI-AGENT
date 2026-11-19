@@ -8,6 +8,7 @@ from typing import Protocol
 
 MAX_TASK_TURNS = 6
 ISO = r"[0-9]{4}-[0-9]{2}-[0-9]{2}"
+DATE_LIKE = rf"(?:{ISO}|[0-9]{{1,2}}[-/][0-9]{{1,2}}[-/][0-9]{{2,4}})"
 REFERENCE = re.compile(rf"\b(?:as of|reference(?: date)?|today is)\s*(?:is|to|:|=)?\s*({ISO})", re.I)
 YES = {"yes", "confirm", "confirmed", "yes confirm", "yes confirmed"}
 NO = {"no", "incorrect", "not correct"}
@@ -50,10 +51,10 @@ def is_task_reply(message: str) -> bool:
     """Recognize replies that must not execute a tool without an active task."""
     reply = normalized_reply(message)
     remainder = REFERENCE.sub(" ", message)
-    remainder = re.sub(ISO, " ", remainder)
+    remainder = re.sub(DATE_LIKE, " ", remainder)
     remainder = re.sub(r"\b(?:starts?|dates?|and)\s*:?", " ", remainder, flags=re.I)
     return reply in YES | NO | CANCEL or (
-        bool(re.search(ISO, message)) and not re.sub(r"[,;\s]", "", remainder)
+        bool(re.search(DATE_LIKE, message)) and not re.sub(r"[,;\s]", "", remainder)
     )
 
 

@@ -83,8 +83,18 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/womens_health_ai
 # Redis connection string
 REDIS_URL=redis://localhost:6379/0
 
-# Set to 'true' for development evaluations; 'false' for strict clinical production mode
-ALLOW_UNVERIFIED_EVIDENCE=true
+# Strict by default. Enable only for fixture-based software tests; this is not a production approval.
+ALLOW_UNVERIFIED_EVIDENCE=false
 ```
 
 If neither database is running, both factories automatically and gracefully fall back to local in-memory engines (`EphemeralSessionStore` and `HybridRetrievalEngine`).
+
+
+## November 10 integration correction
+
+The service now owns its lazy retrieval engine and never imports `main` to find a
+global engine. Strict approval defaults apply uniformly, including factory fallback.
+Use `--development-evidence` for CLI demos with the unverified registry. Optional
+SDKs are not required for offline startup. Runtime session failures preserve raw
+urgent routing and otherwise return a controlled abstention. Live tests require
+`TEST_DATABASE_URL` / `TEST_REDIS_URL` and never overwrite application evidence.

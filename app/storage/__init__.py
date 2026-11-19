@@ -6,8 +6,14 @@ from app.storage.consent import (
     ConsentPolicy,
 )
 from app.storage.context_tracker import ContextTracker
-from app.storage.redis_session_store import RedisSessionStore, get_session_store
 from app.storage.session_store import EphemeralSessionStore
+
+
+def __getattr__(name):
+    if name in {"RedisSessionStore", "get_session_store"}:
+        from app.storage import redis_session_store
+        return getattr(redis_session_store, name)
+    raise AttributeError(name)
 
 __all__ = [
     "CURRENT_CONSENT_VERSION",

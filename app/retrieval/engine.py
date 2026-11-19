@@ -9,7 +9,6 @@ Implements:
 """
 
 import json
-import os
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -19,6 +18,7 @@ from langchain_community.tools import DuckDuckGoSearchRun, WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
 
 from app.retrieval.exceptions import InsufficientEvidenceError
+from app.retrieval.config import development_evidence_enabled
 from app.retrieval.filters import (
     build_constrained_educational_query,
     filter_eligible_passages,
@@ -74,12 +74,7 @@ class HybridRetrievalEngine:
         allow_unverified_for_development: Optional[bool] = None,
     ) -> None:
         self.manifest_path = manifest_path or DEFAULT_MANIFEST_PATH
-        if allow_unverified_for_development is not None:
-            self.allow_unverified_for_development = allow_unverified_for_development
-        else:
-            self.allow_unverified_for_development = (
-                os.getenv("ALLOW_UNVERIFIED_EVIDENCE", "true").strip().lower() in ("true", "1", "yes")
-            )
+        self.allow_unverified_for_development = development_evidence_enabled(allow_unverified_for_development)
         self.manifest_version: str = "unknown"
         self.sources: list[SourceMetadata] = []
         self.passages: list[EvidencePassage] = []
@@ -122,7 +117,7 @@ class HybridRetrievalEngine:
         allow_unverified = (
             self.allow_unverified_for_development
             if allow_unverified_for_development is None
-            else allow_unverified_for_development
+            else development_evidence_enabled(allow_unverified_for_development)
         )
 
         eligible_sources = filter_eligible_sources(

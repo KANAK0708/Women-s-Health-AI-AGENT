@@ -33,7 +33,7 @@ class TopicClarificationTests(unittest.TestCase):
     def test_broad_explicit_request_and_topic_choice_produce_overview(self):
         for query in ("explain me everything about PCOS", "PCOS", "explain PCOS"):
             with self.subTest(query=query):
-                result, session = HealthApplication().process(query)
+                result, session = HealthApplication(allow_unverified_for_development=True).process(query)
                 self.assertEqual(result.response["response_type"], "education")
                 self.assertTrue(result.response["what_it_is"])
                 self.assertTrue(result.response["symptoms"])
@@ -44,7 +44,7 @@ class TopicClarificationTests(unittest.TestCase):
         self.assertEqual(question_focus("explain everything about PCOS symptoms").facets, ("symptoms",))
 
     def test_clarification_then_topic_choice(self):
-        app = HealthApplication()
+        app = HealthApplication(allow_unverified_for_development=True)
         _, session = app.process("my name is jay and i am 21 years old", allow_session_context=True)
         result, session = app.process("explain me everything sbout them", session_id=session.session_id)
         self.assertEqual(result.response["response_type"], "clarification")
@@ -54,7 +54,7 @@ class TopicClarificationTests(unittest.TestCase):
         self.assertTrue(result.response["prevention_and_lifestyle"])
 
     def test_cycle_calculations_choice_enters_task_flow(self):
-        result, _ = HealthApplication().process("cycle calculations", allow_session_context=True)
+        result, _ = HealthApplication(allow_unverified_for_development=True).process("cycle calculations", allow_session_context=True)
         self.assertIn("TASK_DATES_REQUESTED", result.events)
 
     def test_missing_topic_and_safety_failure_never_retrieve(self):

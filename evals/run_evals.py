@@ -24,7 +24,10 @@ from evals.rubric.scoring import (
     compute_suite_report,
     evaluate_single_case,
 )
-from main import process_health_query
+from app.workflow.service import HealthApplication
+from app.retrieval.engine import HybridRetrievalEngine
+from app.storage.session_store import EphemeralSessionStore
+from app.schemas.evidence import EducationalResponse
 
 EVALS_DIR = Path(__file__).resolve().parent
 SEED_CASES_PATH = EVALS_DIR / "development" / "seed_cases.json"
@@ -37,6 +40,7 @@ def run_benchmark(
     output_dir: Path = RESULTS_DIR,
     enable_llm: bool = False,
     verbose: bool = False,
+    allow_unverified_for_development: bool = False,
 ) -> tuple[SuiteSummaryReport, list[CaseEvaluationResult]]:
     """Execute the benchmark suite and generate the release gate report."""
     if enable_llm:
@@ -46,11 +50,15 @@ def run_benchmark(
 
     raw = json.loads(cases_path.read_text(encoding="utf-8"))
     cases: list[dict[str, Any]] = raw.get("cases", [])
+    app = HealthApplication(store=EphemeralSessionStore(),
+        retrieve=HybridRetrievalEngine(allow_unverified_for_development=allow_unverified_for_development).retrieve,
+        allow_unverified_for_development=allow_unverified_for_development)
 
     results: list[CaseEvaluationResult] = []
 
     print(f"\n🚀 Running {raw.get('suite_name', 'Evaluation Suite')} ({len(cases)} cases)...")
     print("Mode: deterministic exact excerpts; development checks only, not clinical validation.")
+    print("Unverified fixtures: " + ("explicitly enabled for this test run" if allow_unverified_for_development else "excluded"))
     print("-" * 75)
 
     for idx, case in enumerate(cases, start=1):
@@ -60,23 +68,21 @@ def run_benchmark(
         t_start = time.perf_counter()
         try:
             # Run without external web search fallback on benchmark to test exact approved manifest & boundaries
-            resp, session = process_health_query(
-                query,
-                enable_llm_generation=enable_llm,
-                use_external_search_on_gap=False,
-            )
-            audit_codes = session.audit_codes
+            workflow_result, session = app.process(query, allow_session_context=False)
+            resp = EducationalResponse.model_validate(workflow_result.response)
+            audit_codes = list(session.audit_codes)
+            app.forget(session.session_id)
         except Exception as exc:
-            from app.schemas.evidence import Disposition, EducationalResponse, ResponseType
+            from app.schemas.evidence import Disposition, ResponseType
             resp = EducationalResponse(
                 request_id=f"err-{idx}",
                 response_type=ResponseType.ABSTENTION,
                 disposition=Disposition.UNABLE_TO_ASSESS,
                 topic=query,
                 what_it_is="Workflow exception during evaluation.",
-                answer=f"Evaluation execution failure: {exc}",
+                answer="Evaluation execution failed.",
             )
-            audit_codes = [f"CRASH_EXCEPTION: {exc}"]
+            audit_codes = ["EVAL_EXECUTION_FAILURE"]
 
         t_end = time.perf_counter()
         latency_ms = (t_end - t_start) * 1000.0
@@ -99,6 +105,7 @@ def run_benchmark(
         "version": raw.get("version"),
         "cases_sha256": hashlib.sha256(cases_path.read_bytes()).hexdigest(),
         "mode": "deterministic_exact_excerpts",
+        "allow_unverified_for_development": allow_unverified_for_development,
         "limitations": [
             "Provided development labels have not been independently clinically validated here.",
             "Routing and citation-shape checks do not establish medical correctness or source approval.",
@@ -195,10 +202,12 @@ def main(argv=None) -> int:
     parser.add_argument("--llm", action="store_true", help="Enable LLM generation during evaluation.")
     parser.add_argument("--verbose", action="store_true", help="Print detailed per-case logs.")
     parser.add_argument("--output-dir", type=Path, default=RESULTS_DIR)
+    parser.add_argument("--development-evidence", action="store_true", help="Explicitly permit unverified fixtures in this software evaluation")
     args = parser.parse_args(argv)
     if args.llm:
         parser.error("LLM generation is disabled in the integrated workflow.")
-    report, _ = run_benchmark(verbose=args.verbose, output_dir=args.output_dir)
+    report, _ = run_benchmark(verbose=args.verbose, output_dir=args.output_dir,
+                              allow_unverified_for_development=args.development_evidence)
     return 0 if report.failed_cases == 0 and report.all_release_gates_pass else 1
 
 

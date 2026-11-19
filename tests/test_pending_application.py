@@ -12,7 +12,7 @@ from health_tools.pending_tasks import MAX_TASK_TURNS
 class PendingApplicationTests(unittest.TestCase):
     def setUp(self):
         self.now = datetime(2026, 11, 7, 12, tzinfo=timezone.utc)
-        self.app = HealthApplication()
+        self.app = HealthApplication(allow_unverified_for_development=True)
         self.sid = None
 
     def send(self, message, **options):
@@ -151,7 +151,7 @@ class PendingApplicationTests(unittest.TestCase):
 
     def test_real_interactive_cli_collects_and_confirms_dates(self):
         root = Path(__file__).resolve().parents[1]
-        run = subprocess.run([sys.executable, "main.py", "--remember"], cwd=root,
+        run = subprocess.run([sys.executable, "main.py", "--remember", "--development-evidence"], cwd=root,
                              input="Calculate cycle intervals\n2026-08-01, 2026-09-05\n2026-11-07\nconfirm\n/quit\n",
                              capture_output=True, text=True, timeout=20)
         self.assertEqual(run.returncode, 0, run.stderr)

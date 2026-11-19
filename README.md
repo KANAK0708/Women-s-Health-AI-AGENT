@@ -3,27 +3,25 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Database: PostgreSQL + pgvector](https://img.shields.io/badge/Database-PostgreSQL%20%2B%20pgvector-blue.svg)](https://github.com/pgvector/pgvector)
 [![Memory: Redis](https://img.shields.io/badge/Memory-Redis%20Session%20Store-red.svg)](https://redis.io/)
-[![Tests: 149 Passing](https://img.shields.io/badge/Tests-149%20Passing-brightgreen.svg)](tests/)
-[![Release Gates: 100%](https://img.shields.io/badge/Release%20Gates-100%25%20Pass-brightgreen.svg)](evals/)
+This is a **development education assistant** for adult PCOS and menstrual-health questions, cycle arithmetic, and explicitly authorized PubMed research.
 
-An **evidence-grounded, non-diagnostic clinical education assistant** for adult menstrual health and Polycystic Ovary Syndrome (PCOS). Built with strict medical safety guardrails, verified public-health evidence, zero-hallucination citation checks, and ephemeral privacy-first memory.
+The checked-in evidence registry contains unverified summaries. Strict mode excludes
+these records by default; it will abstain until approved evidence is available.
+Source approval, reuse rights, and clinical safety have not been established by
+passing software tests. See [the provenance audit](docs/EVIDENCE_PROVENANCE_AUDIT.md).
 
----
-
-## 🌟 What Is It? (In Simple Words)
-
-Most AI chatbots answer health questions by "predicting" the next words, which frequently leads to **hallucinations, false confidence, or dangerous medical errors**.
-
-The **Women's Health AI Agent** takes a fundamentally different, clinically governed approach:
-* **Zero Guesswork:** It never invents medical facts. It answers exclusively using word-for-word, versioned excerpts from accredited health authorities (World Health Organization, ACOG, CDC, and NIH).
-* **Automatic Fact Inspection:** Every sentence generated is checked against source citations using an automated claim verifier (`ClaimVerifier`) before it is displayed. If a statement cannot be verified 100%, the agent safely abstains.
-* **Privacy by Default:** Your health conversations are strictly private. The agent uses temporary memory that automatically expires and erases itself, with instant data deletion on command.
+- Answers use selected stored passages with source identifiers. These passages
+  are not necessarily verbatim quotations from the linked publications.
+- Claim verification uses token/rule checks; it is not proof of factual accuracy.
+- CLI session retention is opt-in with `--remember`. Redis and PostgreSQL adapters
+  are optional. Database failures produce controlled responses rather than a
+  guarantee of uninterrupted service or deletion.
 
 ---
 
 ## 💬 What Questions Does It Answer?
 
-The assistant is validated to provide educational guidance across four primary pillars:
+The implemented development workflows cover these areas:
 
 1. **Polycystic Ovary Syndrome (PCOS):**
    * Clear explanations of what PCOS is and how it affects reproductive hormones.
@@ -45,7 +43,7 @@ The assistant is validated to provide educational guidance across four primary p
 
 ## 🛡️ What Does It NOT Do? (Safety Guardrails)
 
-To protect patient safety and comply with medical device guidelines, the agent strictly enforces pre-retrieval safety boundaries:
+The software applies prototype safety/scope checks before retrieval. These rules are not clinically validated or a statement of regulatory compliance:
 
 * ❌ **No Individual Medical Diagnoses:** The agent educates; it does not replace a doctor.
 * ❌ **No Medication Prescriptions or Dosing Adjustments:** Requests to start, stop, or change doses of prescription drugs (Metformin, Spironolactone, Birth Control, etc.) are strictly blocked and referred to a prescribing clinician or pharmacist.
@@ -132,14 +130,14 @@ flowchart TD
    * **Governed Clinical Registry:** Stored in PostgreSQL with `pgvector` and mirrored locally in `manifest.json`. Sources are stamped with cryptographic SHA-256 fingerprints.
 
 2. **PostgreSQL + pgvector Hybrid Search:**
-   * Blends native full-text search (`ts_rank_cd`) with vector cosine similarity (`<=>`), filtered by strict relevance thresholding (`0.18`), jurisdiction, population, and expiry rules.
+   * Blends native full-text search (`ts_rank_cd`) with vector cosine similarity (`<=>`), filtered by relevance thresholding (PostgreSQL default `0.12`), jurisdiction, population, and expiry rules.
    * Punctuation-safe token grammar protects against SQL injection or full-text syntax crashes.
 
 3. **Automated Claim Verification Gate:**
    * Candidate responses are inspected by `ClaimVerifier`. Any answer with unsupported statements or citation mismatches is replaced with a safe abstention fallback.
 
 4. **Self-Healing Infrastructure:**
-   * Auto-detecting factories (`get_session_store` and `get_retrieval_engine`) automatically connect to live PostgreSQL and Redis services when running, and gracefully fall back to local in-memory engines when offline without downtime.
+   * Auto-detecting factories (`get_session_store` and `get_retrieval_engine`) automatically connect to live PostgreSQL and Redis services when running, and gracefully fall back to local in-memory engines at initialization when optional services are unavailable. Runtime failures stop the affected request; they do not silently copy persistent sessions into another backend.
 
 ---
 
@@ -158,7 +156,7 @@ Clone the repository and activate the virtual environment:
 ### 2. Run the Interactive Assistant
 Start the interactive conversational CLI with memory enabled:
 ```powershell
-python main.py --remember
+python main.py --remember --development-evidence
 ```
 * Commands available in interactive chat:
   * `/forget`: Wipes your conversation context immediately.
@@ -168,7 +166,7 @@ python main.py --remember
 ### 3. Ask Specific Questions via Terminal
 ```powershell
 # Medical evidence inquiry
-python main.py --query "What is PCOS and what are its symptoms?"
+python main.py --query "What is PCOS and what are its symptoms?" --development-evidence
 
 # Emergency red-flag safety check
 python main.py --query "I am pregnant, bleeding heavily and about to faint"
@@ -177,31 +175,37 @@ python main.py --query "I am pregnant, bleeding heavily and about to faint"
 python main.py --query "Calculate my cycle intervals" --period-starts 2026-08-01 2026-09-05 2026-10-08 --as-of 2026-11-06
 
 # Structured JSON output (API integration mode)
-python main.py --query "What is PCOS?" --json
+python main.py --query "What is PCOS?" --json --development-evidence
 ```
 
 ---
 
 ## 🧪 Testing & Quality Assurance
 
-The codebase includes an exhaustive automated test suite and a 50-scenario clinical evaluation benchmark:
+The codebase includes software regression tests and 50 supplied development scenarios. Fixture-backed checks require explicit development authorization:
 
 ```powershell
-# Run all 149 unit and integration tests
+# Run unit and integration tests; live database suites require explicit test URLs
 python -m unittest discover -s tests -v
 
-# Run the 50-case Section 10 Clinical Release Gate Benchmark
-python -m evals.run_evals
+# Run the 50-case software suite with unverified fixtures (not clinical validation)
+python -m evals.run_evals --development-evidence
 ```
 
-### Release Gates Performance
-| Quality Gate | Target | Current Score | Status |
-| :--- | :---: | :---: | :---: |
-| **Immediate Danger Sensitivity** | 100.0% | **100.0%** | ✅ PASS |
-| **Medication & Policy Guardrails** | 100.0% | **100.0%** | ✅ PASS |
-| **Minor (Under 18) Scope Routing** | 100.0% | **100.0%** | ✅ PASS |
-| **Approved Citation Validity** | 100.0% | **100.0%** | ✅ PASS |
-| **In-Scope Educational Quality** | $\ge$ 95.0% | **100.0%** | ✅ PASS |
+### Evidence and backend modes
+
+`--development-evidence` is for software demonstrations only; without it the CLI
+excludes the unverified manifest. Library callers may explicitly set
+`allow_unverified_for_development=True` or the `ALLOW_UNVERIFIED_EVIDENCE` environment
+variable. Defaults are strict across local and database backends.
+
+Live tests do not use `DATABASE_URL` or `REDIS_URL`. Set `TEST_DATABASE_URL` to a
+test administrative PostgreSQL connection (permission to create/drop a disposable
+database) and `TEST_REDIS_URL` to a test Redis connection. PostgreSQL tests create
+an owned temporary database; Redis tests use unique prefixed keys. Missing test
+URLs are reported as skips, not passes. A configured but broken service fails.
+
+See [the November 10 code review](docs/REVIEW_2026-11-10.md) for fixes and test limits.
 
 ---
 
@@ -221,7 +225,7 @@ python -m evals.run_evals
 ├── health_tools/              # Cycle history arithmetic, PubMed search, focused answer selection
 ├── infra/                     # Docker Compose file for PostgreSQL + pgvector and Redis
 ├── pipelines/                 # Manifest synchronization and database migration tools
-├── tests/                     # 149 unit, integration, and live database test suites
+├── tests/                     # Unit, integration, and opt-in live database suites
 ├── main.py                    # Main application CLI entry point
 ├── tools.py                   # Guardrailed educational search tools
 └── REQUIREMENTS.txt           # Project dependencies
