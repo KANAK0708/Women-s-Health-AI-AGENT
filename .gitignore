@@ -52,3 +52,6 @@ evals/results/run_*.json
 
 
 
+
+# Research eval runs (full reports); research_latest.json stays tracked as the baseline
+evals/results/research_run_*.json
