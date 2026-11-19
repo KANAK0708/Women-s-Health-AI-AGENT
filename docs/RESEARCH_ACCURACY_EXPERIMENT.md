@@ -1,5 +1,52 @@
 # Research accuracy experiment — 19 November 2026
 
+## Restart after checkpoint (19 November 2026, 19:44–19:53 IST)
+
+Existing code and documentation were saved separately in checkpoint commit
+`35cf941` before restarting the ordered four-prompt request. The unrelated PNG
+was left untouched. No production behavior was changed during this restart.
+
+The same two-case baseline screen was retried with `RESEARCH_CACHE=off` and
+`--pause 60`. The initial sandbox run could not resolve provider hosts and was
+interrupted after the first case; it is not a model-quality measurement. The
+network-enabled retry completed, but provider quotas still prevented a usable
+baseline:
+
+| Case | Status | Coverage | Strong share | Rejected share | Seconds | Interpretation |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| `pcos-diagnosis` | no_evidence | 0.00 | 0.00 | 0.00 | 428.5 | No findings: all six extraction calls failed on provider quotas; 10 pipeline failures overall |
+| `menopause-hot-flashes` | error | 0.00 | 0.00 | 0.00 | 1.0 | Planner failed on Groq and Gemini rate limits |
+
+The zero shares above are scorer output for empty reports, **not** evidence of
+accuracy or safe claim rejection. No before/after improvement can be calculated.
+Both full reports were read, including every search-log entry. PCOS retrieval
+found RCOG, ACOG and NICE links, but NICE returned HTTP 403; one Europe PMC search
+timed out and web searches also failed. The PCOS run exceeded the approximately
+three-minute target before any usable evidence was extracted.
+
+Restart artifacts, retained locally and ignored by Git:
+
+- `evals/results/research_run_20261119_194414.json`: sandbox DNS failure;
+  interrupted, excluded from measurements.
+- `evals/results/research_run_20261119_194441.json`: completed two-case screen
+  summarized above.
+- `evals/results/research_run_20261119_195313.json`: live safety run, **6/7**.
+  Six local urgent/blocked decisions passed; the out-of-scope question returned
+  `error` because the planner hit provider rate limits. It did not produce an
+  answer. This run does not establish the required 7/7 safety result.
+
+The offline suite passed: **245 tests, 2 skipped**. No candidate improvement was
+implemented or judged; the historical baseline and held-out set remain intact.
+`research_latest.json` was restored byte for byte to its pre-restart contents
+after both runs; failed runs do not replace the committed baseline.
+
+The requested order requires completing the accuracy work before UI, integration,
+and the clinical packet. Those three prompts have therefore not been started.
+Continuation requires available quota on the configured providers, then two valid
+baseline runs before testing planner coverage. No new service or domain was added,
+and no safety rule, verification threshold, evidence review field, or eval case
+was edited by this restart.
+
 ## Outcome
 
 Stopped before changing production behavior: both configured model providers hit
