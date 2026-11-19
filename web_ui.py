@@ -38,33 +38,58 @@ def _research_agent() -> ResearchAgent:
 
 _jobs: dict[str, dict] = {}
 _jobs_lock = threading.Lock()
-JOB_TTL_SECONDS = 3600
+JOB_TTL_SECONDS = 1800  # Never retain report questions beyond the default session TTL.
 
 
-def _start_research_job(question: str) -> str:
+def _start_research_job(question: str, *, consent=False, session_id=None, allow_session_context=False) -> str:
     """Run research in a background thread; the page polls /api/research/<id> for progress."""
-    agent = _research_agent()  # Raises ResearchLLMUnavailable before a job is created.
+    stopped, session = app_instance.prepare_research(
+        question, consent=consent, session_id=session_id,
+        allow_session_context=allow_session_context,
+    )
     job_id = uuid.uuid4().hex
-    job = {"events": [], "done": False, "created": time.monotonic()}
+    ttl = JOB_TTL_SECONDS
+    if session is not None:
+        from datetime import datetime, timezone
+        ttl = min(ttl, max(0, (session.expires_at - datetime.now(timezone.utc)).total_seconds()))
+    job = {"events": [], "done": False, "expires": time.monotonic() + ttl,
+           "session_id": session.session_id if session is not None else session_id}
     with _jobs_lock:
-        for old_id in [k for k, v in _jobs.items() if time.monotonic() - v["created"] > JOB_TTL_SECONDS]:
+        for old_id in [k for k, v in _jobs.items() if time.monotonic() >= v["expires"]]:
             del _jobs[old_id]
         _jobs[job_id] = job
 
+    def expire():
+        with _jobs_lock:
+            _jobs.pop(job_id, None)
+
+    expiry_timer = threading.Timer(ttl, expire)
+    expiry_timer.daemon = True
+    expiry_timer.start()
+
     def progress(message):
         with _jobs_lock:
-            job["events"].append(message)
+            if _jobs.get(job_id) is job:
+                job["events"].append(message)
 
     def work():
+        with _jobs_lock:
+            if _jobs.get(job_id) is not job:
+                return
         try:
-            report = agent.run(question, progress=progress)
+            report = stopped if stopped is not None else app_instance._execute_research(
+                question, progress=progress, agent_factory=_research_agent)
             result = {"report": report.model_dump(mode="json"), "rendered": render_report(report)}
         except Exception:
             result = {"error": "Research failed unexpectedly. Please try again."}
         with _jobs_lock:
-            job.update(result, done=True)
+            if _jobs.get(job_id) is job:
+                job.update(result, done=True)
 
-    threading.Thread(target=work, daemon=True).start()
+    if stopped is not None:
+        work()  # Safety responses need no background model work.
+    else:
+        threading.Thread(target=work, daemon=True).start()
     return job_id
 
 
@@ -110,10 +135,18 @@ class WebUIHandler(BaseHTTPRequestHandler):
 
         if parsed.path.startswith("/api/research/"):
             with _jobs_lock:
-                job = _jobs.get(parsed.path.rsplit("/", 1)[-1])
-                payload = None if job is None else {k: v for k, v in job.items() if k != "created"}
+                job_id = parsed.path.rsplit("/", 1)[-1]
+                job = _jobs.get(job_id)
+                if job is not None and time.monotonic() >= job["expires"]:
+                    del _jobs[job_id]
+                    job = None
+                payload = None if job is None else {k: v for k, v in job.items() if k != "expires"}
                 if payload is not None:
                     payload["events"] = list(payload["events"])
+                    # The browser owns the displayed report after this delivery.
+                    # Do not retain server-side raw questions/reports as history.
+                    if payload["done"]:
+                        del _jobs[job_id]
             if payload is None:
                 self._send_json({"error": "Unknown or expired research job."}, status=HTTPStatus.NOT_FOUND)
             else:
@@ -143,10 +176,14 @@ class WebUIHandler(BaseHTTPRequestHandler):
         if self.path == "/api/forget":
             sid = data.get("session_id")
             if sid:
+                with _jobs_lock:
+                    for job_id in [key for key, job in _jobs.items() if job.get("session_id") == sid]:
+                        del _jobs[job_id]
                 try:
                     app_instance.forget(sid)
                 except Exception:
-                    pass
+                    self._send_json({"error": "Session deletion could not be confirmed. Please retry."}, status=HTTPStatus.SERVICE_UNAVAILABLE)
+                    return
             self._send_json({"deleted": True})
             return
 
@@ -156,11 +193,15 @@ class WebUIHandler(BaseHTTPRequestHandler):
                                 status=HTTPStatus.BAD_REQUEST)
                 return
             try:
-                job_id = _start_research_job(str(data.get("question", "")))
+                job_id = _start_research_job(data.get("question", ""), consent=data.get("consent"),
+                                             session_id=data.get("session_id"),
+                                             allow_session_context=data.get("allow_session_context", False))
             except ResearchLLMUnavailable as exc:
                 self._send_json({"error": str(exc)}, status=HTTPStatus.SERVICE_UNAVAILABLE)
                 return
-            self._send_json({"job_id": job_id}, status=HTTPStatus.ACCEPTED)
+            with _jobs_lock:
+                sid = _jobs.get(job_id, {}).get("session_id")
+            self._send_json({"job_id": job_id, "session_id": sid}, status=HTTPStatus.ACCEPTED)
             return
 
         if self.path == "/api/query":

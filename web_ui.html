@@ -182,6 +182,9 @@
     .research-disclaimer { margin: 20px 0 0 !important; padding-top: 14px; border-top: 1px solid var(--border); color: var(--text-2); font: .79rem/1.6 var(--sans); }
     .demo-banner { background: var(--accent-soft); border: 1px solid var(--border-strong); border-radius: 10px; padding: 12px; margin-bottom: 20px; font-size: .85rem; }
     .demo-banner select { font: inherit; max-width: 100%; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: 6px; padding: 5px; margin: 8px 0 0; }
+    .research-offer { margin-top: 18px; padding: 16px; border: 1px solid var(--border-strong); border-radius: 14px; background: var(--surface); font: .88rem/1.6 var(--sans); }
+    .research-offer p { margin: 0 0 12px; }
+    .research-offer .btn-main { white-space: normal; text-align: left; }
     @media (max-width: 480px) {
       .research-card { padding: 16px 14px; border-radius: 14px; }
       .research-card .research-summary { font-size: 1.06rem; }
@@ -779,6 +782,23 @@
       m.replaceChildren();
       if (structuredReport) renderResearchReport(m, structuredReport);
       else renderAnswer(m, text, events);
+      if (!structuredReport && json && json.research_offer && json.research_offer.available === true) {
+        const offer = json.research_offer;
+        const box = el('section', 'research-offer');
+        box.appendChild(el('p', null, offer.reason));
+        box.appendChild(el('p', null, offer.consent_text));
+        const button = el('button', 'btn-main', 'Research this in medical literature');
+        button.type = 'button';
+        button.onclick = async () => {
+          if (busy) return;
+          button.disabled = true;
+          setBusy(true);
+          try { await research(offer.question); }
+          finally { button.disabled = false; }
+        };
+        box.appendChild(button);
+        m.appendChild(box);
+      }
       if (events && events.length) {
         const c = el('div', 'checks');
         events.forEach(ev => c.appendChild(el('span', 'chip ' + chipClass(ev), prettyEvent(ev))));
@@ -844,8 +864,9 @@
       const label = m.querySelector('.shimmer');
       const started = Date.now();
       try {
-        const res = await fetch('/api/research', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: text, consent: true }) });
+        const res = await fetch('/api/research', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: text, consent: true, session_id: currentSessionId, allow_session_context: $('remember').checked }) });
         let data = await res.json();
+        currentSessionId = data.session_id || currentSessionId;
         if (data.job_id) {
           // Poll for progress: the agent reports each step (plan, search, read, verify, write).
           const jobId = data.job_id;
@@ -874,7 +895,13 @@
 
     async function newChat() {
       if (currentSessionId) {
-        try { await fetch('/api/forget', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: currentSessionId }) }); } catch (e) {}
+        try {
+          const res = await fetch('/api/forget', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: currentSessionId }) });
+          if (!res.ok) throw new Error('forget unavailable');
+        } catch (_) {
+          fillBot(addThinking('Deleting session'), 'Session deletion could not be confirmed. Please try New chat again when storage is available.', ['SESSION_DELETION_UNAVAILABLE']);
+          return;
+        }
       }
       currentSessionId = null;
       document.querySelectorAll('#thread .msg').forEach(n => n.remove());

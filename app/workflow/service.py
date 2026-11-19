@@ -22,6 +22,10 @@ from health_tools.pending_tasks import (
     new_cycle_task, request_input,
 )
 from health_tools.conversation import conversational_reply
+from health_tools.deep_research import (
+    GAP_EVENTS, RESEARCH_AUDIT_CODES, RESEARCH_CONSENT_TEXT, build_research_agent,
+    research_available, research_preflight_allowed,
+)
 from health_tools.symptom_intake import (
     QUESTIONS as INTAKE_QUESTIONS, SCHEMA_VERSION as INTAKE_SCHEMA, IntakeTransition,
     advance_intake, detect_complaint, single_turn_prompt, start_intake,
@@ -35,7 +39,7 @@ class HealthApplication:
                  clinical_trials_search=None, guideline_search=None,
                  policy=None, claim_verifier=None,
                  pending_task_store: PendingTaskStore | None = None, allow_unverified_for_development=None,
-                 intake_store=None):
+                 intake_store=None, research_agent_factory=None, research_availability=None):
         self.store = store if store is not None else get_session_store()
         self.policy = policy or ToolPolicy()
         self._retrieve_callback = retrieve
@@ -51,6 +55,8 @@ class HealthApplication:
         self.intakes = intake_store if intake_store is not None else InMemoryPendingTaskStore()
         self._pending_store_failed = False
         self.allow_unverified_for_development = development_evidence_enabled(allow_unverified_for_development)
+        self._research_agent_factory = research_agent_factory or build_research_agent
+        self._research_availability = research_availability or research_available
 
     def _drop_pending(self, session_id):
         try:
@@ -290,7 +296,7 @@ class HealthApplication:
 
     def process(
         self, query, *, session_id=None, allow_session_context=None,
-        now=None, **tool_inputs,
+        now=None, _research_preflight=False, **tool_inputs,
     ) -> tuple[WorkflowResult, object]:
         """Process one turn; existing memory classes keep ownership of storage.
 
@@ -345,7 +351,8 @@ class HealthApplication:
             return bundle
 
         dependencies = dict(safety_check=lambda message, context: decision,
-                            retrieve=retrieve_turn, policy=self.policy)
+                            retrieve=retrieve_turn,
+                            policy=ToolPolicy(enabled=frozenset()) if _research_preflight else self.policy)
         if self._pubmed_search is not None:
             dependencies["pubmed_search"] = self._pubmed_search
         if self._medlineplus_search is not None:
@@ -388,6 +395,26 @@ class HealthApplication:
             # Preserve the upstream medication/policy boundary care disposition.
             result.response["disposition"] = "routine_review"
         result = self._verify_answer(result, bundles)
+        if _research_preflight:
+            if research_preflight_allowed(result):
+                result = replace(result, events=result.events + ("RESEARCH_ACCEPTED",))
+        elif (decision.action == "proceed" and pending_result is None
+              and select_intent(query) == "education"
+              and turn.context.is_adult != "no"
+              and not (turn.context.age is not None and turn.context.age < 18)
+              and result.response["response_type"] == "abstention"
+              and GAP_EVENTS.intersection(result.events)):
+            try:
+                available = self._research_availability()
+            except Exception:
+                available = False
+            if available:
+                result.response["research_offer"] = dict(
+                    available=True, question=query,
+                    reason="Approved evidence could not answer or support this question.",
+                    consent_text=RESEARCH_CONSENT_TEXT,
+                )
+                result = replace(result, events=result.events + ("RESEARCH_OFFERED",))
         result.response["limitations"].append(
             "Development build: source-review metadata and safety rules have not been independently verified."
         )
@@ -398,7 +425,10 @@ class HealthApplication:
         if result.clarification_requested:
             ContextTracker.record_clarification_turn(turn, result.response["questions"][0])
         session.turn_count = turn.turn_count
-        session.audit_codes = (turn.audit_codes + list(result.events))[-100:]
+        audit = turn.audit_codes + list(result.events)
+        if not session.allow_session_context:
+            audit = [code for code in audit if code not in RESEARCH_AUDIT_CODES]
+        session.audit_codes = audit[-100:]
         if "EVIDENCE_COMPLETE" in result.events:
             session.audit_codes.append("RETRIEVAL_SUCCESS")
         session.context = turn.context if session.allow_session_context else MinimalPatientContext()
@@ -408,6 +438,58 @@ class HealthApplication:
             self._drop_pending(session.session_id)
             return self._session_failure(query, now=current, session_id=session.session_id)
         return result, session
+
+    def prepare_research(self, question, *, consent=False, session_id=None,
+                         allow_session_context=False, now=None):
+        """Return (stop report or None, session) after the main safety/retention gate.
+
+        Consent belongs to this invocation only; an audit code never authorizes a
+        later call. Raw questions and reports are not written into session memory.
+        """
+        from health_tools.research.schema import ResearchReport
+
+        def stop(status, message, protocol_id=None):
+            return (ResearchReport(question=question if isinstance(question, str) else "",
+                                   status=status, summary=message, protocol_id=protocol_id), None)
+
+        if consent is not True:
+            return stop("blocked", "Deep research requires explicit consent for this request. " + RESEARCH_CONSENT_TEXT)
+        # The research pipeline accepts at most 2000 characters. Reject locally
+        # before consuming session state or constructing any external client.
+        if not isinstance(question, str) or not 3 <= len(question.strip()) <= 2000:
+            return stop("blocked", "Please ask a question of 3-2000 characters.")
+        if type(allow_session_context) is not bool:
+            return stop("blocked", "Session context permission must be a boolean.")
+        result, session = self.process(
+            question, session_id=session_id, allow_session_context=allow_session_context,
+            now=now, _research_preflight=True,
+        )
+        if "RESEARCH_ACCEPTED" not in result.events:
+            kind = result.response["response_type"]
+            status = ("urgent" if kind == "urgent_guidance" else "out_of_scope"
+                      if "MINOR_SCOPE" in result.events else "blocked")
+            report, _ = stop(status, result.response["answer"], result.response.get("protocol_id"))
+            return report, session
+        return None, session
+
+    def _execute_research(self, question, *, progress=None, agent_factory=None):
+        """Internal execution: callers must complete prepare_research first."""
+        from health_tools.research.schema import ResearchReport
+        try:
+            agent = (agent_factory or self._research_agent_factory)()
+            return agent.run(question, progress=progress)
+        except Exception:
+            return ResearchReport(question=question, status="error",
+                                  summary="Research is unavailable. Please try again later.")
+
+    def research(self, question, *, consent=False, session_id=None,
+                 allow_session_context=False, progress=None, now=None):
+        """Consent-gated programmatic entry point; no stored acceptance is reused."""
+        report, _ = self.prepare_research(
+            question, consent=consent, session_id=session_id,
+            allow_session_context=allow_session_context, now=now,
+        )
+        return report if report is not None else self._execute_research(question, progress=progress)
 
     def forget(self, session_id: str) -> bool:
         pending_deleted = self._drop_pending(session_id)

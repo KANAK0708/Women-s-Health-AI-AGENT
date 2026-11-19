@@ -24,7 +24,12 @@ class FakeSocket:
 
 
 def get(path):
-    connection = FakeSocket(f"GET {path} HTTP/1.0\r\nHost: localhost\r\n\r\n".encode())
+    return request("GET", path)
+
+
+def request(method, path, payload=None):
+    body = json.dumps(payload).encode() if payload is not None else b""
+    connection = FakeSocket(f"{method} {path} HTTP/1.0\r\nHost: localhost\r\nContent-Length: {len(body)}\r\n\r\n".encode() + body)
     web_ui.WebUIHandler(connection, ("127.0.0.1", 12345), object())
     headers, body = bytes(connection.response).split(b"\r\n\r\n", 1)
     return int(headers.split()[1]), json.loads(body)
