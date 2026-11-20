@@ -11,7 +11,7 @@ import re
 from datetime import date
 from typing import Optional
 
-from app.retrieval.exceptions import ScopeViolationError, UrgentEscalationRequired
+from app.retrieval.exceptions import MinorScopeError, ScopeViolationError, UrgentEscalationRequired
 from app.schemas.evidence import EducationalCategory, EvidencePassage, SourceMetadata
 
 # Urgent red-flag patterns checked deterministically on every turn before retrieval
@@ -38,17 +38,36 @@ URGENT_HAZARD_PATTERNS: list[tuple[re.Pattern[str], str, str]] = [
     ),
 ]
 
+# Medicines people ask to start, stop or re-dose (generic and common brand names).
+_DRUGS = (r"metformin|spironolactone|letrozole|clomi(?:d|phene)|inositol|myo-inositol|progesterone|provera|"
+          r"norethisterone|medroxyprogesterone|tranexamic(?:\s+acid)?|ibuprofen|naproxen|mefenamic(?:\s+acid)?|"
+          r"paracetamol|acetaminophen|iron(?:\s+(?:tablets?|pills?|supplements?))?|ferrous\s+\w+|folic\s+acid|"
+          r"estrogen|oestrogen|estradiol|hrt|birth\s+control(?:\s+pills?)?|contraceptive(?:\s+pills?)?|the\s+pill|"
+          r"levothyroxine|thyroxine|ozempic|semaglutide|antibiotics?|fluconazole|metronidazole|antidepressants?|sertraline")
+
 # Disallowed clinical/diagnostic/prescription patterns outside educational scope
 DISALLOWED_CLINICAL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (
-        re.compile(r"\b(?:i[\s-]?pill|levonorgestrel|emergency\s+contracepti(?:on|ve)|morning[\s-]+after\s+pill)\b", re.IGNORECASE),
+        re.compile(r"\b(?:i[\s-]?pill|levonorgestrel|emergency\s+contracepti(?:on|ve)|morning[\s-]+after\s+pill|"
+                   r"plan[\s-]?b|ulipristal|ella(?:one)?|after[\s-]sex\s+pill)\b|"
+                   # Unprotected sex or a failed condom combined with asking what to take: an EC request.
+                   r"\b(?:unprotected\s+sex|condom\s+(?:broke|burst|split|slipped|came\s+off))\b.{0,80}?"
+                   r"\b(?:take|pill|tablet|prevent\s+(?:a\s+)?pregnancy)\b", re.IGNORECASE),
         "Emergency contraception advice is outside the validated educational corpus.",
     ),
     (
         re.compile(
             r"\b(should\s+i\s+stop\s+(?:taking|my)|stop\s+my\s+prescribed|"
             r"(?:change|double|increase|decrease|halve|adjust)\s+(?:the|my)?\s*(?:dose|dosage)|"
-            r"what\s+dosage\s+of|prescribe\s+me|how\s+many\s+mg.*?(?:take|need|prescribe))\b",
+            r"what\s+dosage\s+of|prescribe\s+me|how\s+many\s+mg.*?(?:take|need|prescribe))\b|"
+            # Changing, stopping or skipping a named medicine or "my pills/tablets/medication".
+            rf"\b(?:stop|skip|quit|increase|decrease|double|halve|reduce|lower|raise|up|adjust|change|miss)\s+(?:taking\s+)?"
+            rf"(?:my|the|her)\s+(?:[\w-]+\s+){{0,2}}?(?:{_DRUGS}|dose|dosage|pills?|tablets?|medications?|medicines?|meds|prescription)\b|"
+            # "How much X should I take", "how many tablets can I take".
+            r"\bhow\s+(?:much|many)\s+(?:[\w-]+\s+){0,4}?(?:should|can|do|must|could)\s+i\s+(?:take|use|have)\b|"
+            # Starting a prescription medicine without a clinician.
+            rf"\b(?:start|begin|get|take|buy|use)\s+(?:[\w-]+\s+){{0,3}}?(?:{_DRUGS})\b.{{0,40}}?\bwithout\s+(?:a\s+)?"
+            r"(?:doctor|prescription|prescriber|gp|clinician)\b",
             re.IGNORECASE,
         ),
         "Medication initiation, stopping, or dosage adjustments require a prescribing clinician or pharmacist.",
@@ -91,7 +110,47 @@ def validate_educational_query_scope(query: str) -> str:
         if pattern.search(cleaned):
             raise ScopeViolationError(reason)
 
+    if mentions_minor(cleaned):
+        raise MinorScopeError(MINOR_SCOPE_MESSAGE)
+
     return cleaned
+
+
+MINOR_SCOPE_MESSAGE = ("This assistant only covers adults (18 and over), so I can't help with questions about someone "
+                       "under 18. Please talk to a paediatrician, family doctor (GP) or school nurse.")
+
+_UNDER_18 = r"(?:[1-9]|1[0-7])"
+_MINOR_PATTERNS = re.compile(
+    # "I'm 15", "im 13", "I am aged 16", "I just turned 14"
+    rf"\b(?:i\s*am|i'm|i’m|im|i\s+just\s+turned|i\s+turned|aged|my\s+age\s+is)\s+(?:aged\s+)?{_UNDER_18}\b(?!\s*(?:%|weeks?|days?|months?|cm|kg|mg|lbs?|pads?|hours?))|"
+    # "my 14 year old daughter", "a 15-year-old", "15 yo"
+    rf"\b{_UNDER_18}\s*-?\s*(?:years?|yrs?|y/?o)\b(?:\s*-?\s*old)?|"
+    # "my daughter is 16"
+    rf"\b(?:daughter|son|child|kid|niece|sister|girl)\s+(?:is|who\s+is|aged)\s+{_UNDER_18}\b",
+    re.IGNORECASE,
+)
+
+
+def mentions_minor(query: str) -> bool:
+    """True when the question is about someone under 18 (stated as a number)."""
+    return bool(_MINOR_PATTERNS.search(query or ""))
+
+
+_DIAGNOSIS_REQUEST = re.compile(
+    r"\bdiagnos(?:e|is)\s+(?:me|my|her|this)\b|\bdiagnos\w*\b.{0,30}\b(?:pcos|pcod|endometriosis|pmdd|fibroids|adenomyosis)\b|"
+    r"\bdo\s+i\s+have\s+(?:pcos|pcod|endometriosis|pmdd|fibroids|adenomyosis|cancer|an?\s+\w+)\b|"
+    r"\b(?:confirm|tell\s+me)\s+(?:that\s+|if\s+|whether\s+)?i\s+have\b|"
+    r"\bwhat\s+(?:condition|disease|illness)\s+do\s+i\s+have\b|\bis\s+it\s+(?:pcos|endometriosis|cancer)\b",
+    re.IGNORECASE,
+)
+
+DIAGNOSIS_NOTE = ("I can't diagnose you — only a clinician who can examine you and order tests can do that. "
+                  "Here is general information that may help you talk it through with them.")
+
+
+def is_diagnosis_request(query: str) -> bool:
+    """True when someone asks to be told which condition they personally have."""
+    return bool(_DIAGNOSIS_REQUEST.search(query or ""))
 
 
 def build_constrained_educational_query(

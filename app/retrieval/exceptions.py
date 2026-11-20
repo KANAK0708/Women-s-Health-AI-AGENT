@@ -20,3 +20,7 @@ class UrgentEscalationRequired(RetrievalError):
 class InsufficientEvidenceError(RetrievalError):
     """Raised when no approved, current, in-scope passages meet coverage thresholds."""
 
+
+
+class MinorScopeError(ScopeViolationError):
+    """Raised when a question is about someone under 18 (adult-only scope)."""

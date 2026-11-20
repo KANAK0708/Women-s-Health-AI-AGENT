@@ -11,7 +11,7 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, StateGraph
 
-from app.retrieval.exceptions import ScopeViolationError, UrgentEscalationRequired
+from app.retrieval.exceptions import MinorScopeError, ScopeViolationError, UrgentEscalationRequired
 from app.retrieval.filters import validate_educational_query_scope
 
 from .schema import (
@@ -190,6 +190,8 @@ class ResearchAgent:
             validate_educational_query_scope(question)
         except UrgentEscalationRequired as urgent:
             return self._stop(state, "urgent", str(urgent), urgent.protocol_id)
+        except MinorScopeError as minor:
+            return self._stop(state, "out_of_scope", str(minor))
         except ScopeViolationError as violation:
             return self._stop(state, "blocked", str(violation))
         # Safety ran on the original text locally; external services only see this version.

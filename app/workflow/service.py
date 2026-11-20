@@ -7,8 +7,8 @@ baseline, not independently clinically validated policies or source approvals.
 from dataclasses import replace
 from datetime import datetime, timezone
 
-from app.retrieval.exceptions import InsufficientEvidenceError, ScopeViolationError, UrgentEscalationRequired
-from app.retrieval.filters import validate_educational_query_scope
+from app.retrieval.exceptions import InsufficientEvidenceError, MinorScopeError, ScopeViolationError, UrgentEscalationRequired
+from app.retrieval.filters import DIAGNOSIS_NOTE, is_diagnosis_request, mentions_minor, validate_educational_query_scope
 from app.retrieval.config import development_evidence_enabled
 from app.schemas.evidence import Disposition, EducationalCategory, EducationalResponse, ResponseType
 from app.schemas.memory import MinimalPatientContext
@@ -115,8 +115,12 @@ class HealthApplication:
         key = session.session_id
         if (decision.action != "proceed"
                 or turn.context.is_adult == "no"
-                or (turn.context.age is not None and turn.context.age < 18)):
+                or (turn.context.age is not None and turn.context.age < 18)
+                or mentions_minor(query)):
             self.intakes.delete(key)  # Safety responses always win and end any intake.
+            return None
+        if is_diagnosis_request(query):
+            self.intakes.delete(key)  # Answered with education plus a "can't diagnose" note, not more questions.
             return None
         intent = select_intent(query)
         if not session.allow_session_context:
@@ -168,7 +172,8 @@ class HealthApplication:
         key = session.session_id
         if (decision.action != "proceed"
                 or turn.context.is_adult == "no"
-                or (turn.context.age is not None and turn.context.age < 18)):
+                or (turn.context.age is not None and turn.context.age < 18)
+                or mentions_minor(query)):
             self.pending_tasks.delete(key)
             return None, query, tool_inputs, ()
         self.pending_tasks.purge_expired(now=now)
@@ -338,6 +343,9 @@ class HealthApplication:
                 decision = SafetyDecision("proceed")
             except UrgentEscalationRequired as urgent:
                 decision = SafetyDecision("urgent", str(urgent), urgent.protocol_id)
+            except MinorScopeError:
+                # Routed by the orchestrator's adult-only check (MINOR_SCOPE), which also ends intake and tasks.
+                decision = SafetyDecision("proceed")
             except ScopeViolationError as scope:
                 decision = SafetyDecision("out_of_scope", str(scope))
             except Exception:
@@ -395,6 +403,9 @@ class HealthApplication:
             # Preserve the upstream medication/policy boundary care disposition.
             result.response["disposition"] = "routine_review"
         result = self._verify_answer(result, bundles)
+        if (isinstance(query, str) and is_diagnosis_request(query)
+                and result.response["response_type"] in ("education", "abstention")):
+            result.response["answer"] = DIAGNOSIS_NOTE + "\n\n" + result.response["answer"]
         if _research_preflight:
             if research_preflight_allowed(result):
                 result = replace(result, events=result.events + ("RESEARCH_ACCEPTED",))
@@ -402,6 +413,7 @@ class HealthApplication:
               and select_intent(query) == "education"
               and turn.context.is_adult != "no"
               and not (turn.context.age is not None and turn.context.age < 18)
+              and not mentions_minor(query)
               and result.response["response_type"] == "abstention"
               and GAP_EVENTS.intersection(result.events)):
             try:
