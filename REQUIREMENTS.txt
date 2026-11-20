@@ -14,3 +14,4 @@ redis
 pgvector
 psycopg2-binary
 numpy
+pypdf

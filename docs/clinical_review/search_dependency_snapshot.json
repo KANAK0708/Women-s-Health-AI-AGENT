@@ -1,0 +1,19 @@
+{
+  "package": "ddgs",
+  "observed_installed_version": "9.16.1",
+  "text_backend_default": "auto",
+  "available_text_backend_keys": [
+    "brave",
+    "duckduckgo",
+    "grokipedia",
+    "mojeek",
+    "startpage",
+    "wikipedia",
+    "yahoo"
+  ],
+  "method_source_sha256": {
+    "_search_sync": "94f74eb8961221179e7fa8676a3d5f4b8410c109b9e3f94a49a68d7be2d5a0b8",
+    "_get_engines": "ae1facae63294223db353cf9e09e0b3c8e84a01fb9338c1d1ded2f4dc3aabeff"
+  },
+  "scope": "Local code inspection only; not evidence that all engines were contacted, and not an audit of provider privacy terms."
+}

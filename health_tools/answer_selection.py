@@ -17,7 +17,12 @@ FACETS = {
     "lifestyle": ("prevention_and_lifestyle", "Lifestyle and habits"),
     "care": ("when_to_seek_care", "When to seek care"),
 }
-_TOPIC = re.compile(r"\b(pcos|pcod|polycystic|periods?|menstr\w*|endometriosis|dysmenorrhea|menorrhagia)\b", re.I)
+_TOPIC = re.compile(
+    r"\b(pcos|pcod|polycystic|periods?|menstr\w*|endometriosis|dysmenorrhea|menorrhagia|"
+    r"oligomenorrhea|amenorrhea|pms|pmdd|premenstrual|fibroids?|leiomyomas?|myomas?|"
+    r"perimenopaus\w*|menopaus\w*)\b",
+    re.I,
+)
 _ASSESSMENT_LOCATOR = re.compile(r"diagnos\w*|criteria|clinical (?:assessment|evaluation)", re.I)
 
 
@@ -35,7 +40,7 @@ def question_focus(query: str, *, active_topic: str | None = None) -> QuestionFo
     care = bool(re.search(r"warning signs|red flags|when\b.*\b(?:doctor|care|help|medical)", lowered))
     if care:
         requested.add("care")
-    if re.search(r"\bsymptoms?\b|\bacne\b|hair (?:growth|thinning)|\bbloating\b", lowered) or (
+    if re.search(r"\bsymptoms?\b|\bacne\b|hair (?:growth|thinning)|\bbloating\b|hot flash\w*|night sweats", lowered) or (
         not care and re.search(r"\bsigns?\b", lowered)
     ):
         requested.add("symptoms")
@@ -43,10 +48,21 @@ def question_focus(query: str, *, active_topic: str | None = None) -> QuestionFo
         requested.add("lifestyle")
     if re.search(r"\b(?:diagnos\w*|criteria|assessment|evaluat\w*)\b", lowered):
         requested.add("assessment")
-    if re.search(r"\b(?:define|definition|overview)\b|what does\b.*\bmean\b|what is (?:pcos|pcod|polycystic|menstruation|a period|endometriosis|it|this)\b|what are periods\b", lowered):
+    if re.search(
+        r"\b(?:define|definition|overview)\b|what does\b.*\bmean\b|"
+        r"what is (?:pcos|pcod|polycystic|menstruation|a period|endometriosis|"
+        r"dysmenorrhea|menorrhagia|oligomenorrhea|amenorrhea|pms|pmdd|premenstrual syndrome|"
+        r"perimenopause|menopause|it|this)\b|"
+        r"what are (?:periods|uterine fibroids|fibroids|leiomyomas?|myomas?)(?!\s+(?:symptoms|signs))\b",
+        lowered,
+    ):
         requested.add("definition")
     broad = bool(re.search(r"\btell me about\b|\bgeneral overview\b|\beverything\b|\ball about\b|\b(?:explain|tell|teach)(?: me)? all\b", lowered))
-    bare_topic = bool(re.fullmatch(r"\s*(?:(?:please )?explain (?:me )?)?(?:pcos|pcod|periods|menstrual health)[.!? ]*", lowered))
+    bare_topic = bool(re.fullmatch(
+        r"\s*(?:(?:please )?explain (?:me )?)?(?:pcos|pcod|periods|menstrual health|endometriosis|"
+        r"dysmenorrhea|menorrhagia|pms|pmdd|fibroids|uterine fibroids|perimenopause|menopause)[.!? ]*",
+        lowered,
+    ))
     if re.search(r"\btell me about\b|\bgeneral overview\b", lowered) or bare_topic or (
         broad and not requested.intersection({"symptoms", "lifestyle", "assessment", "care"})
     ):

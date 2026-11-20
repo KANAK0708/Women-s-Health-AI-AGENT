@@ -1,15 +1,18 @@
 """Integrated development CLI for PCOS and menstrual-health education.
 
 Uses the existing memory/retrieval subsystem and the tools-side orchestrator.
-No LLM generation or automatic external-search fallback is enabled.
+Main answers use exact evidence excerpts. Deep research requires explicit
+consent for each request; there is no automatic external-search fallback.
 """
 
 import argparse
 import json
+import sys
 
 from app.schemas.evidence import EducationalResponse
 from app.workflow.service import HealthApplication
 from health_tools.workflow import render_response
+from health_tools.deep_research import RESEARCH_CONSENT_TEXT
 
 application = HealthApplication()
 # Preserve these names for existing callers using the teammate's session store.
@@ -35,13 +38,19 @@ def process_health_query(
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, epilog=RESEARCH_CONSENT_TEXT)
     parser.add_argument("--query", "-q", help="One question; omit for interactive mode")
     parser.add_argument("--period-starts", nargs="+", help="Confirmed starts, oldest first, YYYY-MM-DD")
     parser.add_argument("--as-of", help="Local reference date for cycle arithmetic, YYYY-MM-DD")
     parser.add_argument("--remember", action="store_true", help="Retain minimal context in this process until expiry/deletion")
-    parser.add_argument("--allow-external-research", action="store_true", help="Authorize sending separately supplied research terms to NCBI")
+    parser.add_argument("--research", action="store_true", help="With --query, explicitly consent to deep research if approved evidence cannot answer; interactive mode confirms each offer")
+    parser.add_argument("--allow-external-research", action="store_true", help="Authorize sending separately supplied research terms to external biomedical APIs")
     parser.add_argument("--research-query", help="Research terms without personal identifiers")
+    parser.add_argument(
+        "--research-source",
+        choices=("pubmed", "medlineplus", "europepmc", "clinical_trials"),
+        help="Optional external medical source to query when research is authorized",
+    )
     parser.add_argument("--jurisdiction", default="Global")
     parser.add_argument("--json", action="store_true", help="Print the structured EducationalResponse")
     parser.add_argument("--development-evidence", action="store_true", help="Explicitly allow unverified fixtures for software testing only")
@@ -51,7 +60,7 @@ def main():
         allow_session_context=args.remember,
         period_start_dates=args.period_starts, as_of=args.as_of,
         jurisdiction=args.jurisdiction, allow_external_research=args.allow_external_research,
-        research_query=args.research_query,
+        research_query=args.research_query, research_source=args.research_source,
     )
     if not args.json:
         print("Development build: evidence-review metadata and safety rules need clinical verification.")
@@ -85,9 +94,42 @@ def main():
                 options["period_start_dates"] = None
                 options["as_of"] = None
             if args.json:
-                print(json.dumps(result.response, indent=2))
+                payload = dict(result.response)
             else:
                 print(render_response(result))
+            offer = result.response.get("research_offer")
+            accepted = False
+            if offer and offer.get("available") is True:
+                # Consent is per turn. The flag never authorizes all future turns.
+                if not args.json:
+                    print("\nResearch this in medical literature: " + offer["reason"])
+                    print(RESEARCH_CONSENT_TEXT)
+                if interactive:
+                    if args.json:
+                        print(RESEARCH_CONSENT_TEXT, file=sys.stderr)
+                    try:
+                        accepted = input("Start deep research for this question? Type yes to consent: ").strip().casefold() == "yes"
+                    except (EOFError, KeyboardInterrupt):
+                        accepted = False
+                else:
+                    accepted = args.research
+                    if not accepted and not args.json:
+                        print("Run this question with --research to give consent for this request.")
+            if accepted:
+                from health_tools.research import render_report
+                if args.json and not interactive:
+                    print(RESEARCH_CONSENT_TEXT, file=sys.stderr)
+                report = application.research(
+                    offer["question"], consent=True, session_id=session_id,
+                    allow_session_context=args.remember,
+                    progress=lambda message: print("Research: " + message, file=sys.stderr),
+                )
+                if args.json:
+                    payload["research_report"] = report.model_dump(mode="json")
+                else:
+                    print("\n" + render_report(report))
+            if args.json:
+                print(json.dumps(payload, indent=2))
             if not interactive:
                 break
     finally:
@@ -95,7 +137,6 @@ def main():
             try:
                 application.forget(session_id)
             except RuntimeError:
-                import sys
                 print("Session deletion could not be confirmed because storage is unavailable.", file=sys.stderr)
 
 

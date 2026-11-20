@@ -1,0 +1,134 @@
+{
+  "suite": "Research agent evaluation (development)",
+  "started_at": "2026-11-19T19:03:37.085630",
+  "models": {
+    "plan_and_report": "groq:openai/gpt-oss-120b -> gemini:gemini-3.5-flash",
+    "extraction": "gemini:gemini-3.5-flash -> groq:openai/gpt-oss-120b"
+  },
+  "summary": {
+    "cases": 5,
+    "passed": 4,
+    "pass_rate": 0.8,
+    "safety_passed": "0/0",
+    "research_passed": "4/5",
+    "mean_coverage": 0.69,
+    "mean_findings": 8,
+    "mean_strong_evidence_share": 0.47,
+    "mean_rejected_share": 0.31,
+    "mean_duration_s": 128.06,
+    "runs_with_pipeline_failures": 2
+  },
+  "results": [
+    {
+      "id": "pcos-diagnosis",
+      "category": "research",
+      "status": "complete",
+      "status_ok": true,
+      "duration_s": 140.4,
+      "pipeline_failures": 0,
+      "coverage": 0.8,
+      "covered": [
+        "Rotterdam / 2 of 3 criteria",
+        "androgen excess",
+        "ultrasound or AMH",
+        "exclude other causes"
+      ],
+      "missing": [
+        "ovulatory dysfunction"
+      ],
+      "findings": 5,
+      "strong_evidence_share": 0.2,
+      "rejected_share": 0.62,
+      "sources": 4,
+      "violations": [],
+      "passed": true
+    },
+    {
+      "id": "endometriosis-treatment",
+      "category": "research",
+      "status": "complete",
+      "status_ok": true,
+      "duration_s": 103.8,
+      "pipeline_failures": 0,
+      "coverage": 1.0,
+      "covered": [
+        "pain relievers",
+        "hormonal treatment",
+        "surgery"
+      ],
+      "missing": [],
+      "findings": 11,
+      "strong_evidence_share": 0.64,
+      "rejected_share": 0.21,
+      "sources": 3,
+      "violations": [],
+      "passed": true
+    },
+    {
+      "id": "menopause-hot-flashes",
+      "category": "research",
+      "status": "complete",
+      "status_ok": true,
+      "duration_s": 212.0,
+      "pipeline_failures": 2,
+      "coverage": 0.67,
+      "covered": [
+        "hormone therapy",
+        "CBT or lifestyle"
+      ],
+      "missing": [
+        "non-hormonal medicines"
+      ],
+      "findings": 12,
+      "strong_evidence_share": 0.83,
+      "rejected_share": 0.43,
+      "sources": 3,
+      "violations": [],
+      "passed": true
+    },
+    {
+      "id": "heavy-menstrual-bleeding",
+      "category": "research",
+      "status": "partial",
+      "status_ok": true,
+      "duration_s": 184.1,
+      "pipeline_failures": 6,
+      "coverage": 1.0,
+      "covered": [
+        "hormonal IUD",
+        "tranexamic acid",
+        "NSAIDs",
+        "procedures"
+      ],
+      "missing": [],
+      "findings": 12,
+      "strong_evidence_share": 0.67,
+      "rejected_share": 0.29,
+      "sources": 4,
+      "violations": [],
+      "passed": true
+    },
+    {
+      "id": "hpv-cervical-screening",
+      "category": "research",
+      "status": "error",
+      "status_ok": false,
+      "duration_s": 0.0,
+      "pipeline_failures": 0,
+      "coverage": 0.0,
+      "covered": [],
+      "missing": [
+        "HPV causes cervical cancer",
+        "vaccination",
+        "screening tests",
+        "precancerous lesions"
+      ],
+      "findings": 0,
+      "strong_evidence_share": 0.0,
+      "rejected_share": 0.0,
+      "sources": 0,
+      "violations": [],
+      "passed": false
+    }
+  ]
+}

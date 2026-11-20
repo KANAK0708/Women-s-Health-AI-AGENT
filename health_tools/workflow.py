@@ -1,6 +1,6 @@
 """Bounded orchestration over injected safety, memory, retrieval, and tools.
 
-This first version uses deterministic routing and exact evidence excerpts, not
+This version uses deterministic routing and exact evidence excerpts, not
 an autonomous LLM planner. The application's reviewed safety policy is required.
 """
 
@@ -10,13 +10,27 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
+from .clinical_trials import search_clinical_trials
 from .contracts import ToolResult
 from .cycle_history import analyze_cycle_history
+from .europepmc import search_europepmc
+from .guidelines import DEMO_REGISTRY, DEFAULT_REGISTRY, search_guidelines
 from .handoff import ContextSnapshot, EvidenceSnapshot, adapt_retrieval, adapt_session, validate_claim_references
+from .medlineplus import search_medlineplus
 from .pubmed import search_pubmed
 from .answer_selection import FACETS, question_focus, select_passages
 from .conversation import conversational_reply
 from .cycle_help import CYCLE_HELP, asks_how_calculator_works, medical_part_of_calculator_question
+
+ALLOWED_TOOLS = frozenset({
+    "cycle_history",
+    "pubmed",
+    "medlineplus",
+    "europepmc",
+    "clinical_trials",
+    "guidelines",
+    "approved_retrieval",
+})
 
 
 @dataclass(frozen=True)
@@ -36,7 +50,7 @@ class SafetyDecision:
 
 @dataclass(frozen=True)
 class ToolPolicy:
-    enabled: frozenset[str] = frozenset({"cycle_history", "pubmed", "approved_retrieval"})
+    enabled: frozenset[str] = ALLOWED_TOOLS
     max_tool_calls: int = 2
     max_passages: int = 5
     max_passage_chars: int = 12000
@@ -44,7 +58,7 @@ class ToolPolicy:
     pubmed_timeout_seconds: float = 10
 
     def __post_init__(self):
-        if not isinstance(self.enabled, frozenset) or not self.enabled <= {"cycle_history", "pubmed", "approved_retrieval"}:
+        if not isinstance(self.enabled, frozenset) or not self.enabled <= ALLOWED_TOOLS:
             raise ValueError("Unknown or mutable tool configuration")
         for value, maximum in ((self.max_tool_calls, 3), (self.max_passages, 6),
                                (self.max_passage_chars, 20000), (self.pubmed_max_results, 5)):
@@ -69,6 +83,14 @@ def select_intent(query: str) -> str:
         return "cycle_explanation"
     if re.search(r"\b(calculate|calculations?|compute|analyse|analyze|summarize|summary)\b", lowered) and re.search(r"\b(periods?|cycles?|dates?)\b", lowered):
         return "cycle_history"
+    if re.search(r"\b(clinical\s+trials?|recruiting\s+trials?|recruiting\s+studies|nct[0-9]{8})\b", lowered):
+        return "clinical_trials"
+    if re.search(r"\b(medlineplus|medline\s+plus|nih\s+health\s+topics?)\b", lowered):
+        return "medlineplus"
+    if re.search(r"\b(europe\s*pmc|europepmc)\b", lowered):
+        return "europepmc"
+    if re.search(r"\b(guideline\s+registry|offline\s+guidelines?)\b", lowered):
+        return "guidelines"
     if re.search(r"\b(pubmed|research|studies|papers|systematic review)\b", lowered):
         return "research"
     return "education"
@@ -79,19 +101,31 @@ class Orchestrator:
         self, *, safety_check: Callable[[str, ContextSnapshot], SafetyDecision],
         retrieve: Callable, policy: ToolPolicy | None = None,
         pubmed_search: Callable = search_pubmed,
+        medlineplus_search: Callable = search_medlineplus,
+        europepmc_search: Callable = search_europepmc,
+        clinical_trials_search: Callable = search_clinical_trials,
+        guideline_search: Callable = search_guidelines,
     ):
-        if not callable(safety_check) or not callable(retrieve) or not callable(pubmed_search):
+        if any(not callable(fn) for fn in (
+            safety_check, retrieve, pubmed_search, medlineplus_search,
+            europepmc_search, clinical_trials_search, guideline_search,
+        )):
             raise ValueError("Safety, retrieval, and research dependencies must be callable")
         self.safety_check = safety_check
         self.retrieve = retrieve
         self.policy = policy or ToolPolicy()
         self.pubmed_search = pubmed_search
+        self.medlineplus_search = medlineplus_search
+        self.europepmc_search = europepmc_search
+        self.clinical_trials_search = clinical_trials_search
+        self.guideline_search = guideline_search
 
     def run(
         self, query: str, *, session=None, now: datetime | None = None,
         period_start_dates: list[str] | None = None, as_of: str | None = None,
         jurisdiction: str = "Global", population: str = "adults_18+",
         allow_external_research: bool = False, research_query: str | None = None,
+        research_source: str | None = None, allow_demo_guidelines: bool = False,
     ) -> WorkflowResult:
         """Run one turn. No storage writes; caller records clarifications in memory.
 
@@ -109,7 +143,7 @@ class Orchestrator:
             "what_it_is": "", "symptoms": [], "prevention_and_lifestyle": [],
             "answer": "", "claims": [], "questions": [], "next_steps": [],
             "limitations": [], "evidence": [], "protocol_id": None,
-            "system_version": "tools-orchestration-v0.3.3",
+            "system_version": "tools-orchestration-v0.4.0",
         }
 
         def finish(message, *, event, kind="abstention", disposition="unable_to_assess", question=False):
@@ -170,6 +204,8 @@ class Orchestrator:
             return finish(message, event="CLARIFICATION_REQUESTED", kind="clarification", question=True)
 
         intent = select_intent(query)
+        if intent == "research" and research_source in {"medlineplus", "europepmc", "clinical_trials"}:
+            intent = research_source
         events.append("INTENT_" + intent.upper())
         if intent == "cycle_explanation":
             cycle_help = CYCLE_HELP
@@ -200,25 +236,55 @@ class Orchestrator:
             )
             return finish(answer, event="CYCLE_COMPLETE", kind="education", disposition="educational")
 
-        if intent == "research":
-            if allow_external_research is not True or not isinstance(research_query, str) or not research_query.strip():
-                return clarify("May I search PubMed using research terms you have reviewed to exclude personal details? Supply those terms separately.")
+        if intent == "guidelines":
             try:
-                result = call_tool("pubmed", lambda: self.pubmed_search(
+                reg_path = DEMO_REGISTRY if allow_demo_guidelines else DEFAULT_REGISTRY
+                result = call_tool("guidelines", lambda: self.guideline_search(
+                    query, jurisdiction=jurisdiction, population=population,
+                    max_results=min(self.policy.max_passages, 5), as_of=as_of,
+                    registry_path=reg_path, allow_demo=allow_demo_guidelines,
+                ))
+                if result is not None and (not isinstance(result, ToolResult) or result.tool != "search_guidelines"):
+                    raise ValueError("Invalid guideline result")
+            except Exception:
+                return finish("Guideline registry search is unavailable.", event="GUIDELINES_FAILED")
+            if result is None:
+                return finish("Guideline registry search is disabled or the tool-call limit was reached.", event="GUIDELINES_BLOCKED")
+            outputs.append(result)
+            response["limitations"] = list(result.limitations)
+            if result.status != "ok" or not result.sources:
+                return finish("No matching approved guideline registry passages were found for this scope.", event="GUIDELINES_EMPTY")
+            lines = ["Guideline registry passages retrieved:"]
+            for source in result.sources:
+                lines.append(f"{source.title} — {source.locator}\n{source.excerpt}\n{source.url}")
+            return finish("\n\n".join(lines), event="GUIDELINES_COMPLETE", kind="education", disposition="educational")
+
+        if intent in {"research", "medlineplus", "europepmc", "clinical_trials"}:
+            tool_spec = {
+                "research": ("pubmed", "search_pubmed", self.pubmed_search, "PubMed"),
+                "medlineplus": ("medlineplus", "search_medlineplus", self.medlineplus_search, "NIH MedlinePlus"),
+                "europepmc": ("europepmc", "search_europepmc", self.europepmc_search, "Europe PMC"),
+                "clinical_trials": ("clinical_trials", "search_clinical_trials", self.clinical_trials_search, "ClinicalTrials.gov"),
+            }[intent]
+            policy_key, expected_tool_name, search_fn, label = tool_spec
+            if allow_external_research is not True or not isinstance(research_query, str) or not research_query.strip():
+                return clarify(f"May I search {label} using research terms you have reviewed to exclude personal details? Supply those terms separately.")
+            try:
+                result = call_tool(policy_key, lambda: search_fn(
                     research_query, max_results=self.policy.pubmed_max_results,
                     timeout=self.policy.pubmed_timeout_seconds,
                 ))
-                if result is not None and (not isinstance(result, ToolResult) or result.tool != "search_pubmed"):
+                if result is not None and (not isinstance(result, ToolResult) or result.tool != expected_tool_name):
                     raise ValueError("Invalid research result")
             except Exception:
                 return finish("Research search is unavailable. No answer was generated from missing research.", event="RESEARCH_FAILED")
             if result is None:
-                return finish("PubMed search is disabled or the tool-call limit was reached.", event="RESEARCH_BLOCKED")
+                return finish(f"{label} search is disabled or the tool-call limit was reached.", event="RESEARCH_BLOCKED")
             outputs.append(result)
             response["limitations"] = list(result.limitations)
             if result.status != "ok":
-                return finish("PubMed could not provide research records for this request. You can try again later or revise the research terms.", event="RESEARCH_INCOMPLETE")
-            # Bibliography only: research abstracts are not promoted to clinical claims.
+                return finish(f"{label} could not provide research records for this request. You can try again later or revise the research terms.", event="RESEARCH_INCOMPLETE")
+            # Bibliography only: research records are not promoted to clinical claims.
             if not result.sources:
                 return finish("No research citations were returned.", event="RESEARCH_EMPTY")
             lines = ["Research records retrieved (not a clinical recommendation):"]

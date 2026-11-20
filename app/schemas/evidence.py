@@ -99,6 +99,13 @@ class EvidenceCitation(BaseModel):
     reviewed_at: str
 
 
+class ResearchOffer(BaseModel):
+    available: bool = True
+    question: str
+    reason: str
+    consent_text: str
+
+
 class EducationalResponse(BaseModel):
     """Typed, non-diagnostic response contract (replaces prototype HealthResponse)."""
 
@@ -132,5 +139,6 @@ class EducationalResponse(BaseModel):
     )
     evidence: list[EvidenceCitation] = Field(default_factory=list)
     protocol_id: Optional[str] = None
+    research_offer: Optional[ResearchOffer] = None
     system_version: str = "v1.0.0-pilot"
 

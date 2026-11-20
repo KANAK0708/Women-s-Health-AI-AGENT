@@ -1,0 +1,757 @@
+{
+  "suite": "Research agent evaluation (development)",
+  "started_at": "2026-11-20T19:50:41.597037",
+  "models": {
+    "plan_and_report": "groq:openai/gpt-oss-120b -> gemini:gemini-3.5-flash",
+    "extraction": "gemini:gemini-3.5-flash -> groq:openai/gpt-oss-120b"
+  },
+  "results": [
+    {
+      "id": "dysmenorrhea-relief",
+      "category": "research",
+      "status": "partial",
+      "status_ok": true,
+      "duration_s": 217.8,
+      "pipeline_failures": 1,
+      "coverage": 0.75,
+      "covered": [
+        "NSAIDs",
+        "heat",
+        "exercise"
+      ],
+      "missing": [
+        "hormonal contraception"
+      ],
+      "findings": 7,
+      "strong_evidence_share": 1.0,
+      "rejected_share": 0.36,
+      "sources": 4,
+      "violations": [],
+      "passed": true
+    },
+    {
+      "id": "heavy-menstrual-bleeding",
+      "category": "research",
+      "status": "complete",
+      "status_ok": true,
+      "duration_s": 311.1,
+      "pipeline_failures": 0,
+      "coverage": 1.0,
+      "covered": [
+        "hormonal IUD",
+        "tranexamic acid",
+        "NSAIDs",
+        "procedures"
+      ],
+      "missing": [],
+      "findings": 9,
+      "strong_evidence_share": 1.0,
+      "rejected_share": 0.5,
+      "sources": 3,
+      "violations": [],
+      "passed": true
+    },
+    {
+      "id": "hpv-cervical-screening",
+      "category": "research",
+      "status": "complete",
+      "status_ok": true,
+      "duration_s": 293.9,
+      "pipeline_failures": 1,
+      "coverage": 0.75,
+      "covered": [
+        "HPV causes cervical cancer",
+        "screening tests",
+        "precancerous lesions"
+      ],
+      "missing": [
+        "vaccination"
+      ],
+      "findings": 12,
+      "strong_evidence_share": 1.0,
+      "rejected_share": 0.14,
+      "sources": 4,
+      "violations": [],
+      "passed": true
+    }
+  ],
+  "reports": {
+    "dysmenorrhea-relief": {
+      "question": "What helps menstrual cramps, and does exercise make a difference?",
+      "status": "partial",
+      "summary": "Over\u2011the\u2011counter medicines for menstrual cramps work well with very few risks [F1]. Heat therapy is likely to reduce menstrual pain intensity both during prophylaxis and acute episodes compared with no treatment [F3]. Heat therapy probably reduces the risk of adverse effects compared with NSAIDs, with a risk ratio of 0.30 [F4]. Heat therapy may provide comparable or slightly better pain relief than NSAIDs after three months, with a weighted mean difference of -1.10 cm [F6]. Regular exercise may reduce menstrual cramps [F2].",
+      "sub_answers": [
+        {
+          "question": "What evidence-based treatments are effective for relieving menstrual cramps?",
+          "answer": "Over\u2011the\u2011counter medicines for menstrual cramps work well with very few risks [F1]. Heat therapy probably reduces the risk of adverse effects compared with NSAIDs, with a risk ratio of 0.30 [F4]. Elagolix significantly reduced dysmenorrhea, with up to about 75% of participants responding [F5]. Heat therapy may provide comparable or slightly better pain relief than NSAIDs after three months, with a weighted mean difference of -1.10 cm [F6]. GnRH agonists provide greater improvement in dysmenorrhea than GnRH antagonists (SMD = 0.69, 95% CI: 0.48-0.91) [F7].",
+          "finding_ids": [
+            "F1",
+            "F4",
+            "F5",
+            "F6",
+            "F7"
+          ]
+        },
+        {
+          "question": "How does regular exercise influence the severity of menstrual cramps?",
+          "answer": "Regular exercise may reduce menstrual cramps [F2].",
+          "finding_ids": [
+            "F2"
+          ]
+        },
+        {
+          "question": "What non\u2011pharmacologic interventions besides exercise help reduce menstrual pain?",
+          "answer": "Heat therapy is likely to reduce menstrual pain intensity both during prophylaxis and acute episodes compared with no treatment [F3].",
+          "finding_ids": [
+            "F3"
+          ]
+        }
+      ],
+      "key_findings": [
+        {
+          "id": "F1",
+          "sub_question": "What evidence-based treatments are effective for relieving menstrual cramps?",
+          "claim": "Over\u2011the\u2011counter medicines for menstrual cramps work well with very few risks.",
+          "quote": "There are over\u2011the\u2011counter medicines for menstrual cramps or pain that work well with very few risks.",
+          "source_id": "web:1",
+          "source_url": "https://www.womenshealth.gov/getting-active/physical-activity-menstrual-cycle",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F2",
+          "sub_question": "What evidence-based treatments are effective for relieving menstrual cramps?",
+          "claim": "Regular exercise may reduce menstrual cramps.",
+          "quote": "Researchers have found that some women have fewer painful cramps during menstruation if they exercise regularly.",
+          "source_id": "web:1",
+          "source_url": "https://www.womenshealth.gov/getting-active/physical-activity-menstrual-cycle",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 0.8
+        },
+        {
+          "id": "F3",
+          "sub_question": "What non\u2011pharmacologic interventions besides exercise help reduce menstrual pain?",
+          "claim": "Heat therapy is likely to reduce menstrual pain intensity both during prophylaxis and acute episodes compared with no treatment.",
+          "quote": "Compared to no treatment, heat therapy is likely to reduce pain intensity both during prophylaxis and acute episodes.",
+          "source_id": "pubmed:41657584",
+          "source_url": "https://pubmed.ncbi.nlm.nih.gov/41657584/",
+          "source_type": "systematic_review",
+          "published": "2025",
+          "support_score": 0.92
+        },
+        {
+          "id": "F4",
+          "sub_question": "What evidence-based treatments are effective for relieving menstrual cramps?",
+          "claim": "Heat therapy probably reduces the risk of adverse effects compared with NSAIDs, with a risk ratio of 0.30.",
+          "quote": "For the safety assessment, heat therapy probably reduced the risk of adverse effects compared with NSAIDs (8 RCTs, 728 females, RR 0.30, 95% CI 0.15-0.59).",
+          "source_id": "pubmed:41657584",
+          "source_url": "https://pubmed.ncbi.nlm.nih.gov/41657584/",
+          "source_type": "systematic_review",
+          "published": "2025",
+          "support_score": 0.9
+        },
+        {
+          "id": "F5",
+          "sub_question": "What evidence-based treatments are effective for relieving menstrual cramps?",
+          "claim": "Elagolix significantly reduced dysmenorrhea, with up to about 75% of participants responding.",
+          "quote": "Elagolix significantly reduced dysmenorrhea (up to ~75% responder rate), nonmenstrual pelvic pain (~55%-69%), and dyspareunia (~60%) compared to placebo, with benefits sustained at 12 months.",
+          "source_id": "europepmc:MED:42937421",
+          "source_url": "https://europepmc.org/article/MED/42937421",
+          "source_type": "systematic_review",
+          "published": "2026",
+          "support_score": 0.83
+        },
+        {
+          "id": "F6",
+          "sub_question": "What evidence-based treatments are effective for relieving menstrual cramps?",
+          "claim": "Heat therapy may provide comparable or slightly better pain relief than NSAIDs after three months, with a weighted mean difference of -1.10 cm.",
+          "quote": "When compared to NSAIDs, heat therapy may provide comparable or slightly superior pain relief after 3 months of treatment (22 RCTs, 1,938 females, WMD -1.10 cm, 95% CI -1.51 to -0.70 cm, RD 4%),",
+          "source_id": "pubmed:41657584",
+          "source_url": "https://pubmed.ncbi.nlm.nih.gov/41657584/",
+          "source_type": "systematic_review",
+          "published": "2025",
+          "support_score": 0.67
+        },
+        {
+          "id": "F7",
+          "sub_question": "What evidence-based treatments are effective for relieving menstrual cramps?",
+          "claim": "GnRH agonists provide greater improvement in dysmenorrhea than GnRH antagonists (SMD = 0.69, 95% CI: 0.48-0.91).",
+          "quote": "Compared with GnRH-ant, GnRH-a yielded greater improvements in dysmenorrhea (standardized mean difference (SMD) = 0.69, 95% CI: 0.48-0.91), nonmenstrual pelvic pain (NMPP) (SMD = 0.33, 95% CI: 0.16-0.50), overall pelvic pain (OPP) (SMD = 0.25, 95% CI: 0.13-0.38), and dyspareunia (SMD = 0.14, 95% CI: 0.02-0.26).",
+          "source_id": "europepmc:MED:42953143",
+          "source_url": "https://europepmc.org/article/MED/42953143",
+          "source_type": "systematic_review",
+          "published": "2026",
+          "support_score": 0.5
+        }
+      ],
+      "conflicts": [],
+      "gaps": [
+        "How does regular exercise influence the severity of menstrual cramps?"
+      ],
+      "sources": [
+        {
+          "source_id": "web:1",
+          "title": "Physical activity and your menstrual cycleLock",
+          "url": "https://www.womenshealth.gov/getting-active/physical-activity-menstrual-cycle",
+          "publisher": "www.womenshealth.gov",
+          "source_type": "official_guidance",
+          "published": null,
+          "retrieved_at": "2026-11-20T19:51:37.752211+05:30",
+          "sha256": "5ecded245e9fec23abb8dc68d0d8cad8712bef3df20c3309fb24f473855b58a9"
+        },
+        {
+          "source_id": "pubmed:41657584",
+          "title": "Heat therapy for primary dysmenorrhea: a systematic review and meta-analysis.",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/41657584/",
+          "publisher": "NCBI / PubMed",
+          "source_type": "systematic_review",
+          "published": "2025",
+          "retrieved_at": "2026-11-20T14:20:45.951372+00:00",
+          "sha256": "19a2a8540c14b0ad3258dc4c1236aa7e2c40ae69f81ee655e4fbf6769612a43a"
+        },
+        {
+          "source_id": "europepmc:MED:42937421",
+          "title": "A Systematic Review of Elagolix for the Management of Endometriosis-associated Pain.",
+          "url": "https://europepmc.org/article/MED/42937421",
+          "publisher": "EMBL-EBI / Europe PMC",
+          "source_type": "systematic_review",
+          "published": "2026",
+          "retrieved_at": "2026-11-20T14:21:06.758417+00:00",
+          "sha256": "26e7befd587a1ef836a30112ba5003344d79755be0d71da90135f74d93bc42ec"
+        },
+        {
+          "source_id": "europepmc:MED:42953143",
+          "title": "Gonadotropin-releasing hormone antagonists versus agonists for endometriosis: a systematic review and meta-analysis of randomized controlled trials.",
+          "url": "https://europepmc.org/article/MED/42953143",
+          "publisher": "EMBL-EBI / Europe PMC",
+          "source_type": "systematic_review",
+          "published": "2026",
+          "retrieved_at": "2026-11-20T14:21:06.758417+00:00",
+          "sha256": "9f2a5afa3bb6d4617189e8584668b82830876e62d7ae0f3336b859a28b5df866"
+        }
+      ],
+      "search_log": [
+        "round 1 | pubmed | 'dysmenorrhea treatment NSAID heat therapy' -> 3 new",
+        "round 1 | europepmc | 'dysmenorrhea treatment NSAID heat therapy' -> 3 new",
+        "round 1 | medlineplus | 'dysmenorrhea treatment NSAID heat therapy' -> 0 new",
+        "round 1 | web | 'dysmenorrhea treatment NSAID heat therapy' -> 3 new",
+        "round 1 | guidelines | 'dysmenorrhea treatment NSAID heat therapy' -> 0 new",
+        "round 1 | pubmed | 'menstrual cramps exercise impact' -> 3 new",
+        "round 1 | europepmc | 'menstrual cramps exercise impact' -> 3 new",
+        "round 1 | medlineplus | 'menstrual cramps exercise impact' -> 0 new",
+        "round 1 | web | 'menstrual cramps exercise impact' -> 2 new",
+        "round 1 | guidelines | 'menstrual cramps exercise impact' -> 0 new",
+        "round 1 | pubmed | 'dysmenorrhea non drug therapy' -> 2 new",
+        "round 1 | europepmc | 'dysmenorrhea non drug therapy' -> 3 new",
+        "round 1 | medlineplus | 'dysmenorrhea non drug therapy' -> 1 new",
+        "round 1 | web | 'dysmenorrhea non drug therapy' -> 2 new",
+        "round 1 | guidelines | 'dysmenorrhea non drug therapy' -> 3 new",
+        "skipped https://cks.nice.org.uk/topics/dysmenorrhoea/management/primary-dysmenorrhoea/: HTTP 403",
+        "extracted 3 facts from https://www.womenshealth.gov/getting-active/physical-activity-menstrual-cycle (5306 chars, official_guidance)",
+        "extracted 6 facts from https://pubmed.ncbi.nlm.nih.gov/41657584/ (2094 chars, systematic_review)",
+        "extracted 1 facts from https://europepmc.org/article/MED/42937421 (2285 chars, systematic_review)",
+        "extracted 1 facts from https://europepmc.org/article/MED/42953143 (2101 chars, systematic_review)",
+        "extraction failed for https://www.acog.org/store/patient-pamphlets/gynecologic-tests-conditions/dysmenorrhea-painful-periods/: RuntimeError: gemini:gemini-3.5-flash: GoogleAPIError: 504 DEADLINE_EXCEEDED. {'error': {'code': 504, 'message': 'Deadline expired before operation could complete.', 'status'",
+        "claim meaning check on 8 claims: all faithful",
+        "report rewrite: 0 unsupported / 0 overlong sentences, 1 uncited findings before; 0 / 0, 0 after",
+        "summary fact-check removed 0 sentence(s)"
+      ],
+      "rejected_findings": 4,
+      "rejection_reasons": {
+        "claim has numbers not in the quote": 1,
+        "claim is not supported by the quote": 2,
+        "near-duplicate of a stronger finding": 1
+      },
+      "protocol_id": null,
+      "redactions": [],
+      "models": {
+        "plan_and_report": "groq:openai/gpt-oss-120b -> gemini:gemini-3.5-flash",
+        "extraction": "gemini:gemini-3.5-flash -> groq:openai/gpt-oss-120b"
+      },
+      "generated_at": "2026-11-20T19:54:19.425800+05:30",
+      "disclaimer": "Educational research summary built from the cited sources only. It is not a diagnosis or treatment plan; discuss your situation with a qualified clinician."
+    },
+    "heavy-menstrual-bleeding": {
+      "question": "What are the treatment options for heavy menstrual bleeding?",
+      "status": "complete",
+      "summary": "Pharmacologic treatments include tranexamic acid, NSAIDs, combined hormonal contraception, cyclical oral progestogens, and hormone therapy such as oral contraceptive pills, patches, or injections [F7][F4]. Gonadotrophin\u2011releasing hormone antagonists such as linzagolix and relugolix\u2011estradiol\u2011norethisterone acetate are recommended for moderate to severe symptoms of uterine fibroids [F2]. Hormonal intrauterine devices are inserted into the uterus to provide contraception and control bleeding [F6]. Endometrial ablation, including fluid\u2011filled thermal balloon and microwave techniques, is a surgical option when intervention is appropriate [F1][F3]. Hysterectomy, the removal of the uterus, is the most invasive surgical treatment [F8].",
+      "sub_answers": [
+        {
+          "question": "What pharmacologic therapies are effective for heavy menstrual bleeding?",
+          "answer": "Tranexamic acid, NSAIDs, combined hormonal contraception, and cyclical oral progestogens are pharmacological treatments for heavy menstrual bleeding [F7]. Gonadotrophin\u2011releasing hormone antagonists such as linzagolix and relugolix\u2011estradiol\u2011norethisterone acetate are recommended as options in NICE technology appraisal guidance for treating moderate to severe symptoms of uterine fibroids in some people [F2]. Hormone therapy is commonly available as oral contraceptive pills, patches, or injections and is frequently prescribed by a health care provider before trying more invasive treatments such as endometrial ablation [F4]. Non\u2011hormonal medications like tranexamic acid and ibuprofen can be used to reduce heavy menstrual bleeding [F5]. Progestogen-only contraception may suppress menstruation and can be beneficial for women with heavy menstrual bleeding [F9].",
+          "finding_ids": [
+            "F7",
+            "F2",
+            "F4",
+            "F5",
+            "F9"
+          ]
+        },
+        {
+          "question": "What hormonal intrauterine devices are used to treat heavy menstrual bleeding?",
+          "answer": "Hormonal intrauterine devices are inserted into the uterus to provide contraception and control bleeding [F6].",
+          "finding_ids": [
+            "F6"
+          ]
+        },
+        {
+          "question": "What surgical options are available for heavy menstrual bleeding?",
+          "answer": "Endometrial ablation is a surgical option for heavy menstrual bleeding [F1]. Fluid\u2011filled thermal balloon and microwave endometrial ablation are recommended as options in NICE technology appraisal guidance when surgical intervention is appropriate [F3]. Hysterectomy, the removal of the uterus, is the most invasive surgical treatment for heavy menstrual bleeding [F8].",
+          "finding_ids": [
+            "F1",
+            "F3",
+            "F8"
+          ]
+        }
+      ],
+      "key_findings": [
+        {
+          "id": "F1",
+          "sub_question": "What surgical options are available for heavy menstrual bleeding?",
+          "claim": "Endometrial ablation is a surgical option for heavy menstrual bleeding.",
+          "quote": "Treatment options should be tailored to symptoms (heavy menstrual bleeding, pain, and/or infertility) and include medical options (non-steroidal anti-inflammatory drugs, tranexamic acid, combined oral contraceptives, levonorgestrel intrauterine system, dienogest, other progestins, gonadotropin-releasing analogues), interventional options (uterine artery embolization), and surgical options (endometrial ablation, excision of adenomyosis, hysterectomy).",
+          "source_id": "pubmed:37244746",
+          "source_url": "https://pubmed.ncbi.nlm.nih.gov/37244746/",
+          "source_type": "guideline",
+          "published": "2023 Jun",
+          "support_score": 1.0
+        },
+        {
+          "id": "F2",
+          "sub_question": "What pharmacologic therapies are effective for heavy menstrual bleeding?",
+          "claim": "Gonadotrophin\u2011releasing hormone antagonists such as linzagolix and relugolix\u2011estradiol\u2011norethisterone acetate are recommended as options in NICE technology appraisal guidance for treating moderate to severe symptoms of uterine fibroids in some people.",
+          "quote": "For gonadotrophin-releasing hormone (GnRH) antagonists recommended as options in NICE technology appraisal guidance for treating moderate to severe symptoms of uterine fibroids in some people, see the guidance on: linzagolix (TA996, 2024) relugolix\u2013estradiol\u2013norethisterone acetate (TA832, 2022).",
+          "source_id": "web:0",
+          "source_url": "https://www.nice.org.uk/guidance/ng88/chapter/recommendations",
+          "source_type": "guideline",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F3",
+          "sub_question": "What surgical options are available for heavy menstrual bleeding?",
+          "claim": "Fluid\u2011filled thermal balloon and microwave endometrial ablation are recommended as options in NICE technology appraisal guidance when surgical intervention is appropriate.",
+          "quote": "Fluid-filled thermal balloon and microwave endometrial ablation are recommended as options in NICE technology appraisal guidance when the woman and her clinician have decided that surgical intervention is appropriate.",
+          "source_id": "web:0",
+          "source_url": "https://www.nice.org.uk/guidance/ng88/chapter/recommendations",
+          "source_type": "guideline",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F4",
+          "sub_question": "What pharmacologic therapies are effective for heavy menstrual bleeding?",
+          "claim": "Hormone therapy is commonly available as oral contraceptive pills, patches, or injections and is frequently prescribed by a health care provider before trying more invasive treatments such as endometrial ablation.",
+          "quote": "Hormone therapy is commonly available as oral contraceptive pills, patches, or injections. Hormone therapy is frequently prescribed by a health care provider before trying more invasive treatments such as endometrial ablation.",
+          "source_id": "web:2",
+          "source_url": "https://www.fda.gov/medical-devices/surgery-devices/endometrial-ablation-heavy-menstrual-bleeding",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F5",
+          "sub_question": "What pharmacologic therapies are effective for heavy menstrual bleeding?",
+          "claim": "Non\u2011hormonal medications like tranexamic acid and ibuprofen can be used to reduce heavy menstrual bleeding.",
+          "quote": "Non-hormonal medications can be used with or without hormonal therapy. Some medications may include tranexamic acid and non-steroidal anti-inflammatories (such as ibuprofen) and are used to reduce heavy menstrual bleeding.",
+          "source_id": "web:2",
+          "source_url": "https://www.fda.gov/medical-devices/surgery-devices/endometrial-ablation-heavy-menstrual-bleeding",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F6",
+          "sub_question": "What hormonal intrauterine devices are used to treat heavy menstrual bleeding?",
+          "claim": "Hormonal intrauterine devices are inserted into the uterus to provide contraception and control bleeding.",
+          "quote": "There are also several types of hormonal intrauterine devices or systems that are inserted by a health care provider into the uterus for contraception and control of bleeding.",
+          "source_id": "web:2",
+          "source_url": "https://www.fda.gov/medical-devices/surgery-devices/endometrial-ablation-heavy-menstrual-bleeding",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F7",
+          "sub_question": "What pharmacologic therapies are effective for heavy menstrual bleeding?",
+          "claim": "Tranexamic acid, NSAIDs, combined hormonal contraception, and cyclical oral progestogens are pharmacological treatments for heavy menstrual bleeding.",
+          "quote": "If a woman with HMB declines an LNG-IUS or it is not suitable, consider the following pharmacological treatments: non-hormonal: tranexamic acid NSAIDs (non-steroidal anti-inflammatory drugs) hormonal: combined hormonal contraception cyclical oral progestogens. [2018]",
+          "source_id": "web:0",
+          "source_url": "https://www.nice.org.uk/guidance/ng88/chapter/recommendations",
+          "source_type": "guideline",
+          "published": null,
+          "support_score": 0.79
+        },
+        {
+          "id": "F8",
+          "sub_question": "What surgical options are available for heavy menstrual bleeding?",
+          "claim": "Hysterectomy, the removal of the uterus, is the most invasive surgical treatment for heavy menstrual bleeding.",
+          "quote": "Hysterectomy is a surgery which removes the uterus and is the most invasive treatment for heavy menstrual bleeding.",
+          "source_id": "web:2",
+          "source_url": "https://www.fda.gov/medical-devices/surgery-devices/endometrial-ablation-heavy-menstrual-bleeding",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 0.78
+        },
+        {
+          "id": "F9",
+          "sub_question": "What pharmacologic therapies are effective for heavy menstrual bleeding?",
+          "claim": "Progestogen-only contraception may suppress menstruation and can be beneficial for women with heavy menstrual bleeding.",
+          "quote": "Be aware that progestogen-only contraception may suppress menstruation, which could be beneficial to women with HMB. [2018]",
+          "source_id": "web:0",
+          "source_url": "https://www.nice.org.uk/guidance/ng88/chapter/recommendations",
+          "source_type": "guideline",
+          "published": null,
+          "support_score": 0.71
+        }
+      ],
+      "conflicts": [],
+      "gaps": [],
+      "sources": [
+        {
+          "source_id": "pubmed:37244746",
+          "title": "Guideline No. 437: Diagnosis and Management of Adenomyosis.",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/37244746/",
+          "publisher": "NCBI / PubMed",
+          "source_type": "guideline",
+          "published": "2023 Jun",
+          "retrieved_at": "2026-11-20T14:24:52.493277+00:00",
+          "sha256": "6bc91c11cab0da700ea63b2f75cefa31b7545b6c7c315202ec625eb80d599f88"
+        },
+        {
+          "source_id": "web:0",
+          "title": "Recommendations | Heavy menstrual bleeding: assessment and management | Guidance | NICE",
+          "url": "https://www.nice.org.uk/guidance/ng88/chapter/recommendations",
+          "publisher": "www.nice.org.uk",
+          "source_type": "guideline",
+          "published": null,
+          "retrieved_at": "2026-11-20T19:55:44.733578+05:30",
+          "sha256": "6d2359d07f59fd8b05b3b45d44b0575d58d86837fc979eeb3c5653b2b79f479e"
+        },
+        {
+          "source_id": "web:2",
+          "title": "Endometrial Ablation for Heavy Menstrual Bleeding | FDA",
+          "url": "https://www.fda.gov/medical-devices/surgery-devices/endometrial-ablation-heavy-menstrual-bleeding",
+          "publisher": "www.fda.gov",
+          "source_type": "official_guidance",
+          "published": null,
+          "retrieved_at": "2026-11-20T19:55:42.438058+05:30",
+          "sha256": "1c0aba7a3878fbdca7813df6e22343f69a7b7e4514a49f0bb100e8967f168b4d"
+        }
+      ],
+      "search_log": [
+        "round 1 | pubmed | 'heavy menstrual bleeding tranexamic acid' -> 3 new",
+        "round 1 | europepmc | 'heavy menstrual bleeding tranexamic acid' -> 3 new",
+        "round 1 | medlineplus | 'heavy menstrual bleeding tranexamic acid' -> 0 new",
+        "round 1 | web | 'heavy menstrual bleeding tranexamic acid' -> 2 new",
+        "round 1 | guidelines | 'heavy menstrual bleeding tranexamic acid' -> 3 new",
+        "round 1 | pubmed | 'levonorgestrel intrauterine system menorrhagia' -> 1 new",
+        "round 1 | europepmc | 'levonorgestrel intrauterine system menorrhagia' -> 3 new",
+        "round 1 | medlineplus | 'levonorgestrel intrauterine system menorrhagia' -> 0 new",
+        "round 1 | web | 'levonorgestrel intrauterine system menorrhagia' -> 2 new",
+        "round 1 | guidelines | 'levonorgestrel intrauterine system menorrhagia' -> 3 new",
+        "round 1 | pubmed | 'heavy menstrual bleeding endometrial ablation' -> 3 new",
+        "round 1 | europepmc | 'heavy menstrual bleeding endometrial ablation' -> 3 new",
+        "round 1 | medlineplus | 'heavy menstrual bleeding endometrial ablation' -> 2 new",
+        "round 1 | web | 'heavy menstrual bleeding endometrial ablation' -> 4 new",
+        "round 1 | guidelines | 'heavy menstrual bleeding endometrial ablation' -> 2 new",
+        "skipped https://cks.nice.org.uk/topics/menorrhagia-heavy-menstrual-bleeding/prescribing-information/tranexamic-acid/: HTTP 403",
+        "extracted 6 facts from https://pubmed.ncbi.nlm.nih.gov/37244746/ (2724 chars, guideline)",
+        "extracted 0 facts from https://www.nice.org.uk/guidance/ng88 (3420 chars, guideline)",
+        "extracted 6 facts from https://www.nice.org.uk/guidance/ng88/chapter/recommendations (17945 chars, guideline)",
+        "extracted 1 facts from https://www.who.int/publications/i/item/9789240021730 (792 chars, guideline)",
+        "extracted 5 facts from https://www.fda.gov/medical-devices/surgery-devices/endometrial-ablation-heavy-menstrual-bleeding (9228 chars, official_guidance)",
+        "claim meaning check on 16 claims: reworded 4",
+        "summary fact-check removed 0 sentence(s)"
+      ],
+      "rejected_findings": 9,
+      "rejection_reasons": {
+        "claim is not supported by the quote": 2,
+        "near-duplicate of a stronger finding": 7
+      },
+      "protocol_id": null,
+      "redactions": [],
+      "models": {
+        "plan_and_report": "groq:openai/gpt-oss-120b -> gemini:gemini-3.5-flash",
+        "extraction": "gemini:gemini-3.5-flash -> groq:openai/gpt-oss-120b"
+      },
+      "generated_at": "2026-11-20T20:00:00.506149+05:30",
+      "disclaimer": "Educational research summary built from the cited sources only. It is not a diagnosis or treatment plan; discuss your situation with a qualified clinician."
+    },
+    "hpv-cervical-screening": {
+      "question": "How does HPV relate to cervical cancer, and what screening is recommended?",
+      "status": "complete",
+      "summary": "Cervical cancer is caused by persistent infection with human papillomavirus (HPV) [F1]. Persistent HPV infection of the cervix can lead to precancerous lesions which, if left untreated, cause about 95% of cervical cancers [F2]. Women should be screened for cervical cancer with a high\u2011performance test every 5\u201310 years starting at age 30 [F3]. Women living with HIV should be screened every 3\u20135 years, starting at age 25 [F4]. HPV nucleic acid testing, conventional cytology, and liquid\u2011based cytology each reduce cervical cancer incidence and mortality [F9].",
+      "sub_answers": [
+        {
+          "question": "What is the role of human papillomavirus (HPV) infection in the development of cervical cancer?",
+          "answer": "Cervical cancer is caused by persistent infection with human papillomavirus (HPV) [F1]. Persistent HPV infection of the cervix can lead to precancerous lesions which, if left untreated, cause about 95% of cervical cancers [F2]. Almost all cervical cancer cases (99%) are linked to infection with high\u2011risk HPV [F7]. Infection with a high\u2011risk HPV type is necessary but not sufficient on its own to cause cervical cancer, and most women with such infection do not develop cancer [F10]. Persistent HPV infection is the most important risk factor for developing cervical cancer [F11]. High\u2011risk HPV types are carcinogenic and are found in 99% of cervical precancers [F12].",
+          "finding_ids": [
+            "F1",
+            "F2",
+            "F7",
+            "F10",
+            "F11",
+            "F12"
+          ]
+        },
+        {
+          "question": "What are the current evidence\u2011based guidelines for cervical cancer screening in women?",
+          "answer": "Women should be screened for cervical cancer with a high\u2011performance test every 5\u201310 years starting at age 30 [F3]. Women living with HIV should be screened every 3\u20135 years, starting at age 25 [F4]. The global strategy encourages a minimum of two lifetime screens with a high\u2011performance test by age 35 and again by age 45 [F5]. Cervical screening from the age of 30 (25 years in women living with HIV) can detect cervical precancer, and when coupled with timely treatment can prevent progression to cervical cancer [F6]. 70% of women are screened using a high\u2011performance test by age 35 years and again by age 45 years [F8].",
+          "finding_ids": [
+            "F3",
+            "F4",
+            "F5",
+            "F6",
+            "F8"
+          ]
+        },
+        {
+          "question": "How effective are HPV DNA testing and co\u2011testing compared with cytology alone for cervical cancer screening?",
+          "answer": "HPV nucleic acid testing, conventional cytology, and liquid\u2011based cytology each reduce cervical cancer incidence and mortality [F9].",
+          "finding_ids": [
+            "F9"
+          ]
+        }
+      ],
+      "key_findings": [
+        {
+          "id": "F1",
+          "sub_question": "What is the role of human papillomavirus (HPV) infection in the development of cervical cancer?",
+          "claim": "Cervical cancer is caused by persistent infection with human papillomavirus (HPV).",
+          "quote": "Cervical cancer is caused by persistent infection with human papillomavirus (HPV).",
+          "source_id": "web:0",
+          "source_url": "https://www.who.int/news-room/fact-sheets/detail/cervical-cancer",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F2",
+          "sub_question": "What is the role of human papillomavirus (HPV) infection in the development of cervical cancer?",
+          "claim": "Persistent HPV infection of the cervix can lead to precancerous lesions which, if left untreated, cause about 95% of cervical cancers.",
+          "quote": "Persistent HPV infection of the cervix (the lower part of the uterus or womb, which opens into the vagina \u2013 also called the birth canal) can lead to precancerous lesions which if left untreated cause about 95% of cervical cancers.",
+          "source_id": "web:0",
+          "source_url": "https://www.who.int/news-room/fact-sheets/detail/cervical-cancer",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F3",
+          "sub_question": "What are the current evidence\u2011based guidelines for cervical cancer screening in women?",
+          "claim": "Women should be screened for cervical cancer with a high-performance test every 5\u201310 years starting at age 30.",
+          "quote": "Women should be screened for cervical cancer with a high-performance test every 5\u201310 years starting at age 30.",
+          "source_id": "web:0",
+          "source_url": "https://www.who.int/news-room/fact-sheets/detail/cervical-cancer",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F4",
+          "sub_question": "What are the current evidence\u2011based guidelines for cervical cancer screening in women?",
+          "claim": "Women living with HIV should be screened every 3\u20135 years, starting at age 25.",
+          "quote": "Women living with HIV should be screened every 3\u20135 years, starting at age 25.",
+          "source_id": "web:0",
+          "source_url": "https://www.who.int/news-room/fact-sheets/detail/cervical-cancer",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F5",
+          "sub_question": "What are the current evidence\u2011based guidelines for cervical cancer screening in women?",
+          "claim": "The global strategy encourages a minimum of two lifetime screens with a high-performance test by age 35 and again by age 45.",
+          "quote": "The global strategy encourages a minimum of two lifetime screens with a high-performance test by age 35 and again by age 45.",
+          "source_id": "web:0",
+          "source_url": "https://www.who.int/news-room/fact-sheets/detail/cervical-cancer",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F6",
+          "sub_question": "What are the current evidence\u2011based guidelines for cervical cancer screening in women?",
+          "claim": "Cervical screening from the age of 30 (25 years in women living with HIV) can detect cervical precancer, and when coupled with timely treatment can prevent progression to cervical cancer.",
+          "quote": "Cervical screening from the age of 30 (25 years in women living with HIV) can detect cervical precancer, and when coupled with timely treatment can prevent progression to cervical cancer.",
+          "source_id": "web:0",
+          "source_url": "https://www.who.int/news-room/fact-sheets/detail/cervical-cancer",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F7",
+          "sub_question": "What is the role of human papillomavirus (HPV) infection in the development of cervical cancer?",
+          "claim": "Almost all cervical cancer cases (99%) are linked to infection with high-risk human papillomaviruses (HPV).",
+          "quote": "Almost all cervical cancer cases (99%) are linked to infection with high-risk human papillomaviruses (HPV), an extremely common virus transmitted through sexual contact.",
+          "source_id": "web:1",
+          "source_url": "https://www.who.int/health-topics/cervical-cancer",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F8",
+          "sub_question": "What are the current evidence\u2011based guidelines for cervical cancer screening in women?",
+          "claim": "70% of women are screened using a high\u2011performance test by age 35 years and again by age 45 years.",
+          "quote": "Screening: 70% of women screened using a high-performance test by age 35 years, and again by age 45 years;",
+          "source_id": "web:2",
+          "source_url": "https://www.iarc.who.int/wp-content/uploads/2021/11/QA_HB18_web.pdf",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F9",
+          "sub_question": "How effective are HPV DNA testing and co\u2011testing compared with cytology alone for cervical cancer screening?",
+          "claim": "HPV nucleic acid testing, conventional cytology, and liquid\u2011based cytology each reduce cervical cancer incidence and mortality.",
+          "quote": "HPV nucleic acid testing, conventional cytology, and liquid-based cytology are all established to reduce cervical cancer incidence and mortality.",
+          "source_id": "web:2",
+          "source_url": "https://www.iarc.who.int/wp-content/uploads/2021/11/QA_HB18_web.pdf",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F10",
+          "sub_question": "What is the role of human papillomavirus (HPV) infection in the development of cervical cancer?",
+          "claim": "Infection with a high-risk HPV type is necessary but not sufficient on its own to cause cervical cancer, and most women with such infection do not develop cancer.",
+          "quote": "Infection with a high-risk HPV type is considered necessary for the development of cervical cancer but, by itself, is not sufficient to cause cancer. The vast majority of women with HPV infection, even those with high-risk HPV types, do not develop cancer.",
+          "source_id": "web:2",
+          "source_url": "https://www.cdc.gov/pinkbook/hcp/table-of-contents/chapter-11-human-papillomavirus.html",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 0.91
+        },
+        {
+          "id": "F11",
+          "sub_question": "What is the role of human papillomavirus (HPV) infection in the development of cervical cancer?",
+          "claim": "Persistent HPV infection is the most important risk factor for developing cervical cancer.",
+          "quote": "A small proportion of infected persons become persistently infected; persistent infection is the most important risk factor for the development of cervical cancer.",
+          "source_id": "web:2",
+          "source_url": "https://www.cdc.gov/pinkbook/hcp/table-of-contents/chapter-11-human-papillomavirus.html",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 0.89
+        },
+        {
+          "id": "F12",
+          "sub_question": "What is the role of human papillomavirus (HPV) infection in the development of cervical cancer?",
+          "claim": "High-risk HPV types are carcinogenic and are found in 99% of cervical precancers.",
+          "quote": "High-risk or oncogenic HPV types act as carcinogens in the development of cervical cancer and other anogenital cancers. High-risk types (including types 16, 18, and others) can cause low-grade cervical cell abnormalities, high-grade cervical cell abnormalities that are precursors to cancer, and anogenital cancers. High-risk HPV types are detected in 99% of cervical precancers.",
+          "source_id": "web:2",
+          "source_url": "https://www.cdc.gov/pinkbook/hcp/table-of-contents/chapter-11-human-papillomavirus.html",
+          "source_type": "official_guidance",
+          "published": null,
+          "support_score": 0.86
+        }
+      ],
+      "conflicts": [],
+      "gaps": [],
+      "sources": [
+        {
+          "source_id": "web:0",
+          "title": "Cervical cancer",
+          "url": "https://www.who.int/news-room/fact-sheets/detail/cervical-cancer",
+          "publisher": "www.who.int",
+          "source_type": "official_guidance",
+          "published": null,
+          "retrieved_at": "2026-11-20T20:01:33.483368+05:30",
+          "sha256": "3906a92e74ae26fef4610b244d6c9d39ddbb0c7829604d920398601d6c1b7c4e"
+        },
+        {
+          "source_id": "web:1",
+          "title": "Cervical cancer",
+          "url": "https://www.who.int/health-topics/cervical-cancer",
+          "publisher": "www.who.int",
+          "source_type": "official_guidance",
+          "published": null,
+          "retrieved_at": "2026-11-20T20:01:34.630889+05:30",
+          "sha256": "01588bf2b10d024b2c3e2021b674ea5e955336c05c0e0852b2f790bf117a59e3"
+        },
+        {
+          "source_id": "web:2",
+          "title": "QA_HB18_web",
+          "url": "https://www.iarc.who.int/wp-content/uploads/2021/11/QA_HB18_web.pdf",
+          "publisher": "www.iarc.who.int",
+          "source_type": "official_guidance",
+          "published": null,
+          "retrieved_at": "2026-11-20T20:04:25.945057+05:30",
+          "sha256": "924df5818a3b780a2925a080610bb89c5220e0273827aa427a5d7ff82d86f8d7"
+        },
+        {
+          "source_id": "web:2",
+          "title": "Chapter 11: Human Papillomavirus | Pink Book | CDC",
+          "url": "https://www.cdc.gov/pinkbook/hcp/table-of-contents/chapter-11-human-papillomavirus.html",
+          "publisher": "www.cdc.gov",
+          "source_type": "official_guidance",
+          "published": null,
+          "retrieved_at": "2026-11-20T20:01:36.050556+05:30",
+          "sha256": "117c211b461a3af9b17628da07694fb4111f52a52b9b70a1fe6dba7574adc878"
+        }
+      ],
+      "search_log": [
+        "round 1 | pubmed | 'HPV cervical cancer pathogenesis' -> 3 new",
+        "round 1 | europepmc | 'HPV cervical cancer pathogenesis' -> 3 new",
+        "round 1 | medlineplus | 'HPV cervical cancer pathogenesis' -> 0 new",
+        "round 1 | web | 'HPV cervical cancer pathogenesis' -> 3 new",
+        "round 1 | guidelines | 'HPV cervical cancer pathogenesis' -> 3 new",
+        "round 1 | pubmed | 'cervical cancer screening guidelines' -> 3 new",
+        "round 1 | europepmc | 'cervical cancer screening guidelines' -> 3 new",
+        "round 1 | medlineplus | 'cervical cancer screening guidelines' -> 1 new",
+        "round 1 | web | 'cervical cancer screening guidelines' -> 2 new",
+        "round 1 | guidelines | 'cervical cancer screening guidelines' -> 3 new",
+        "round 1 | pubmed | 'HPV DNA testing co-testing effectiveness' -> 3 new",
+        "round 1 | europepmc | 'HPV DNA testing co-testing effectiveness' -> 3 new",
+        "round 1 | medlineplus | 'HPV DNA testing co-testing effectiveness' -> 0 new",
+        "round 1 | web | 'HPV DNA testing co-testing effectiveness' -> 0 new",
+        "round 1 | guidelines | 'HPV DNA testing co-testing effectiveness' -> 2 new",
+        "extracted 6 facts from https://www.who.int/news-room/fact-sheets/detail/cervical-cancer (10451 chars, official_guidance)",
+        "extracted 2 facts from https://www.who.int/health-topics/cervical-cancer (3309 chars, official_guidance)",
+        "extracted 3 facts from https://www.cdc.gov/pinkbook/hcp/table-of-contents/chapter-11-human-papillomavirus.html (36188 chars, official_guidance)",
+        "extracted 1 facts from https://europepmc.org/article/MED/42819356 (1008 chars, guideline)",
+        "extracted 0 facts from https://europepmc.org/article/MED/41758382 (1662 chars, guideline)",
+        "extraction failed for https://www.cdc.gov/cervical-cancer/screening/index.html: RuntimeError: gemini:gemini-3.5-flash: GoogleAPIError: 504 DEADLINE_EXCEEDED. {'error': {'code': 504, 'message': 'Deadline expired before operation could complete.', 'status'",
+        "claim meaning check on 12 claims: reworded 1",
+        "round 2 | pubmed | 'HPV DNA testing co-testing effectiveness' -> 0 new",
+        "round 2 | europepmc | 'HPV DNA testing co-testing effectiveness' -> 0 new",
+        "round 2 | medlineplus | 'HPV DNA testing co-testing effectiveness' -> 0 new",
+        "round 2 | web | 'HPV DNA testing co-testing effectiveness' -> 2 new",
+        "round 2 | guidelines | 'HPV DNA testing co-testing effectiveness' -> 0 new",
+        "extracted 0 facts from https://iris.who.int/items/16652e25-1204-4d55-910b-9df5fd952f80 (2777 chars, official_guidance)",
+        "extracted 4 facts from https://www.iarc.who.int/wp-content/uploads/2021/11/QA_HB18_web.pdf (9489 chars, official_guidance)",
+        "claim meaning check on 4 claims: reworded 1",
+        "summary fact-check removed 0 sentence(s)"
+      ],
+      "rejected_findings": 2,
+      "rejection_reasons": {
+        "near-duplicate of a stronger finding": 2
+      },
+      "protocol_id": null,
+      "redactions": [],
+      "models": {
+        "plan_and_report": "groq:openai/gpt-oss-120b -> gemini:gemini-3.5-flash",
+        "extraction": "gemini:gemini-3.5-flash -> groq:openai/gpt-oss-120b"
+      },
+      "generated_at": "2026-11-20T20:05:24.438963+05:30",
+      "disclaimer": "Educational research summary built from the cited sources only. It is not a diagnosis or treatment plan; discuss your situation with a qualified clinician."
+    }
+  },
+  "summary": {
+    "cases": 3,
+    "passed": 3,
+    "pass_rate": 1.0,
+    "safety_passed": "0/0",
+    "research_passed": "3/3",
+    "mean_coverage": 0.83,
+    "mean_findings": 9.33,
+    "mean_strong_evidence_share": 1.0,
+    "mean_rejected_share": 0.33,
+    "mean_duration_s": 274.27,
+    "runs_with_pipeline_failures": 2
+  }
+}

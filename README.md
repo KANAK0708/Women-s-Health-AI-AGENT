@@ -3,7 +3,18 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Database: PostgreSQL + pgvector](https://img.shields.io/badge/Database-PostgreSQL%20%2B%20pgvector-blue.svg)](https://github.com/pgvector/pgvector)
 [![Memory: Redis](https://img.shields.io/badge/Memory-Redis%20Session%20Store-red.svg)](https://redis.io/)
-This is a **development education assistant** for adult PCOS and menstrual-health questions, cycle arithmetic, and explicitly authorized PubMed research.
+This is a **development education assistant** for adult women's-health questions: PCOS and menstrual health, cycle arithmetic, guided symptom questions, and a consented research agent that searches trusted medical sources and returns cited, fact-checked reports.
+
+> [!IMPORTANT]
+> **This project is self-hosted. There is no public server or shared account.**
+> You run it on your own computer and **use your own API keys** (Groq and/or Google Gemini).
+> - Keys go in your local `.env` file, which is git-ignored. Never commit it or paste keys into issues or chat.
+> - Usage, rate limits and any costs on those accounts are yours. Free tiers work but hit daily limits quickly.
+> - Your questions are sent to the services you configure (Groq, Gemini, PubMed, Europe PMC, MedlinePlus, web search) only when you run the research agent. Personal details are removed first by a rule-based filter, but don't type names, dates of birth or contact details.
+>
+> See [Set up your own API keys](#1-set-up-your-own-api-keys) below.
+
+**Latest test results (20 November 2026):** 289 unit tests passed, 50/50 development scenarios, 7/7 research safety cases, 3/3 live research questions. See the [testing report](docs/TESTING_REPORT.md) for before/after numbers.
 
 The checked-in evidence registry contains unverified summaries. Strict mode excludes
 these records by default; it will abstain until approved evidence is available.
@@ -143,17 +154,44 @@ flowchart TD
 
 ## 🚀 Quick Start Guide
 
-### 1. Prerequisites & Environment Setup
-Clone the repository and activate the virtual environment:
+### 1. Set up your own API keys
 
-```powershell
-# In PowerShell (Windows)
-.\venv\Scripts\Activate.ps1
+The safety rules, symptom questions, cycle calculator and stored-evidence answers work **without any keys**. The research agent needs at least one of:
+
+| Provider | Used for | Get a key |
+| --- | --- | --- |
+| Groq | Planning searches and writing the report | https://console.groq.com/keys |
+| Google Gemini | Reading long documents and checking each claim against its quote | https://aistudio.google.com/apikey |
+
+Both keys together give the best results. Either one alone works, with less checking.
+
+```bash
+git clone https://github.com/KANAK0708/Women-s-Health-AI-AGENT.git
+cd Women-s-Health-AI-AGENT
+python3 -m venv venv && source venv/bin/activate      # Windows: .\venv\Scripts\Activate.ps1
+pip install -r REQUIREMENTS.txt
+cp .env.example .env                                   # Windows: copy .env.example .env
 ```
 
-*(Or use `.\venv\Scripts\python.exe` directly)*.
+Open `.env` and replace the placeholders with **your own** keys:
 
-### 2. Run the Interactive Assistant
+```ini
+GROQ_API_KEY=your_groq_key
+GEMINI_API_KEY=your_gemini_key
+GROQ_MODEL=openai/gpt-oss-120b
+GEMINI_MODEL=gemini-3.5-flash
+```
+
+`.env` stays on your machine. PostgreSQL and Redis are optional: without them the app uses built-in local storage.
+
+### 2. Run the browser chat or the research agent
+
+```bash
+python3 web_ui.py --open                                         # chat UI at http://127.0.0.1:8000
+python3 -m health_tools.research "What helps period pain?"       # research report in the terminal
+```
+
+### 3. Run the Interactive Assistant
 Start the interactive conversational CLI with memory enabled:
 ```powershell
 python main.py --remember --development-evidence
@@ -163,7 +201,7 @@ python main.py --remember --development-evidence
   * `/cancel`: Clears any pending date calculation.
   * `/quit`: Cleanly exits the assistant.
 
-### 3. Ask Specific Questions via Terminal
+### 4. Ask Specific Questions via Terminal
 ```powershell
 # Medical evidence inquiry
 python main.py --query "What is PCOS and what are its symptoms?" --development-evidence
@@ -190,7 +228,26 @@ python -m unittest discover -s tests -v
 
 # Run the 50-case software suite with unverified fixtures (not clinical validation)
 python -m evals.run_evals --development-evidence
+
+# Research-agent safety cases (no API keys needed, runs in seconds)
+python -m evals.run_research_evals --category safety
+
+# Live research cases (uses YOUR Groq/Gemini keys, about 4-5 minutes per question)
+RESEARCH_CACHE=off python -m evals.run_research_evals --only heavy-menstrual-bleeding,hpv-cervical-screening
 ```
+
+### Test results: before and after
+
+Full details, including what failed and what is still not tested, are in the [testing report](docs/TESTING_REPORT.md).
+
+| Check | Before (`14aca05`, 10 Nov) | Now (20 Nov) |
+| --- | --- | --- |
+| Unit and integration tests | 167 passed | **289 passed** |
+| 50 development scenarios | 50/50 | **50/50** (one regression found and fixed in this run) |
+| Research safety cases | did not exist | **7/7** |
+| Live research questions | did not exist | **3/3 passed**, 0.83 topic coverage, all findings from strong evidence |
+| Web research with citations | not available (PubMed links only) | available, with every claim checked against its source quote |
+| Follow-up questions for symptoms | not available | guided questions, one at a time |
 
 ### Evidence and backend modes
 
@@ -222,10 +279,11 @@ See [the November 10 code review](docs/REVIEW_2026-11-10.md) for fixes and test 
 │   └── evidence_manifest/     # Versioned clinical evidence manifest (manifest.json)
 ├── docs/                      # Engineering contracts, orchestration guide, consistency specs
 ├── evals/                     # 50-case seed benchmark suite & scoring rubrics
-├── health_tools/              # Cycle history arithmetic, PubMed search, focused answer selection
+├── health_tools/              # Cycle arithmetic, symptom intake, PubMed search, research/ agent
 ├── infra/                     # Docker Compose file for PostgreSQL + pgvector and Redis
 ├── pipelines/                 # Manifest synchronization and database migration tools
 ├── tests/                     # Unit, integration, and opt-in live database suites
+├── web_ui.py / web_ui.html    # Local browser chat (self-hosted, runs on 127.0.0.1)
 ├── main.py                    # Main application CLI entry point
 ├── tools.py                   # Guardrailed educational search tools
 └── REQUIREMENTS.txt           # Project dependencies

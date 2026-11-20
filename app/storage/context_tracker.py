@@ -90,6 +90,16 @@ class ContextTracker:
         lowered = user_input.lower()
         if "pcos" in lowered or "pcod" in lowered or "polycystic" in lowered:
             ctx.active_topic = "PCOS (Polycystic Ovary Syndrome)"
+        elif "endometriosis" in lowered:
+            ctx.active_topic = "Endometriosis"
+        elif any(t in lowered for t in ("fibroid", "leiomyoma", "myoma")):
+            ctx.active_topic = "Uterine Fibroids"
+        elif any(t in lowered for t in ("pms", "pmdd", "premenstrual")):
+            ctx.active_topic = "Premenstrual Syndrome (PMS and PMDD)"
+        elif any(t in lowered for t in ("perimenopaus", "menopaus")):
+            ctx.active_topic = "Menopause and Perimenopause"
+        elif "menorrhagia" in lowered or "heavy bleeding" in lowered or "heavy menstrual" in lowered:
+            ctx.active_topic = "Heavy Menstrual Bleeding (Menorrhagia)"
         elif any(t in lowered for t in ("period", "menstrua", "cycle", "cramp", "dysmenorrhea")):
             ctx.active_topic = "Menstrual Health"
 

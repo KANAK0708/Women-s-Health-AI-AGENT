@@ -1,3 +1,7 @@
+import os
+
+os.environ["RESEARCH_CACHE"] = "off"  # tests must never read or write the real cache
+
 import sys
 import unittest
 import unittest.mock
@@ -543,3 +547,198 @@ class MeaningAndCoverageTests(unittest.TestCase):
         result = agent.run("Does heat help period pain?")
         cited = {i for a in result.sub_answers for i in a.finding_ids}
         self.assertEqual(cited, {f.id for f in result.key_findings})
+
+
+class CacheTests(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        self.tmp = tempfile.TemporaryDirectory()
+        self.env = unittest.mock.patch.dict(os.environ, {"RESEARCH_CACHE": "on", "RESEARCH_CACHE_DIR": self.tmp.name})
+        self.env.start()
+
+    def tearDown(self):
+        self.env.stop()
+        self.tmp.cleanup()
+
+    def test_round_trip_expiry_and_off_switch(self):
+        from health_tools.research import cache
+        key = cache.make_key("x", 1)
+        cache.put("ns", key, {"a": [1, 2]})
+        self.assertEqual(cache.get("ns", key, ttl=60), {"a": [1, 2]})
+        self.assertIsNone(cache.get("ns", key, ttl=-1))  # expired
+        with unittest.mock.patch.dict(os.environ, {"RESEARCH_CACHE": "off"}):
+            self.assertIsNone(cache.get("ns", key, ttl=60))
+
+    def test_search_results_are_reused(self):
+        from health_tools.research.sources import cached
+        calls = []
+
+        def search(terms):
+            calls.append(terms)
+            return [Document(doc_id="who:1", url="https://www.who.int/x", title="X", publisher="WHO",
+                             source_type="official_guidance", text="t")]
+
+        wrapped = cached("fake", search)
+        first, second = wrapped("PCOS diagnosis"), wrapped("pcos diagnosis ")
+        self.assertEqual(calls, ["PCOS diagnosis"])
+        self.assertEqual(second[0].url, first[0].url)
+
+    def test_model_answers_are_reused_until_the_prompt_changes(self):
+        chat = FakeChat(result=RefinedSearch(search_terms=["a"]))
+        client = llm_module.LangChainStructuredLLM([(chat, "m", 1000)])
+        client.ask(RefinedSearch, "system v1", "user")
+        client.ask(RefinedSearch, "system v1", "user")
+        self.assertEqual(len(chat.seen), 1)
+        client.ask(RefinedSearch, "system v2", "user")
+        self.assertEqual(len(chat.seen), 2)
+
+
+class PrivacyTests(unittest.TestCase):
+    def test_redaction_rules(self):
+        from health_tools.research.privacy import redact
+        self.assertEqual(redact("I'm 34 and my last period was 2026-10-03; is that normal?"),
+                         ("I am [age] and my last period was [date]; is that normal?", ["age", "date"]))
+        self.assertEqual(redact("My name is Priya Sharma, I live in Austin Texas, email priya@x.com")[0],
+                         "My name is [name], I live in [location], email [email]")
+        for kept in ("What screening is recommended for women over 40?", "Women aged 45-55 with irregular periods",
+                     "Does 400 mcg folic acid prevent neural tube defects?", "A 45-year-old with hot flashes"):
+            self.assertEqual(redact(kept), (kept, []))
+
+    def test_models_only_see_the_redacted_question(self):
+        seen = []
+
+        def plan_spy(user):
+            seen.append(user)
+            return heat_plan(user)
+
+        fast = FakeLLM("fast", {"ResearchPlan": plan_spy, "DraftReport": lambda u: seen.append(u) or DraftReport(summary=""),
+                                "RefinedSearch": lambda _: RefinedSearch()})
+        long = FakeLLM("long", {"ExtractedFacts": heat_extract})
+        search = lambda terms: [Document(doc_id="who:1", url="https://www.who.int/heat", title="Heat", publisher="WHO",
+                                         source_type="official_guidance", text=HEAT_TEXT)]
+        question = "I'm 34, email me at me@example.com: does heat help period pain?"
+        result = ResearchAgent(fast, long, searches={"s": search}).run(question)
+        self.assertTrue(seen)
+        self.assertTrue(all("34" not in u and "example.com" not in u for u in seen))
+        self.assertEqual(result.redactions, ["age", "email"])
+        self.assertEqual(result.question, question)  # the local report keeps what the user typed
+        self.assertTrue(any("removed personal details" in line for line in result.search_log))
+
+
+def tiny_pdf(text: str) -> bytes:
+    """A minimal one-page PDF with real extractable text (built by hand, no network)."""
+    stream = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET".encode()
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    out, offsets = b"%PDF-1.4\n", []
+    for number, body in enumerate(objects, 1):
+        offsets.append(len(out))
+        out += f"{number} 0 obj\n".encode() + body + b"\nendobj\n"
+    xref = len(out)
+    out += f"xref\n0 {len(objects) + 1}\n0000000000 65535 f \n".encode()
+    out += b"".join(f"{o:010d} 00000 n \n".encode() for o in offsets)
+    out += f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode()
+    return out
+
+
+class GuidelineAndPdfTests(unittest.TestCase):
+    def test_guideline_pages_are_typed_as_guidelines(self):
+        self.assertEqual(source_type_for("https://www.nice.org.uk/guidance/ng88"), "guideline")
+        self.assertEqual(source_type_for("https://www.acog.org/clinical/clinical-guidance/practice-bulletin/x"), "guideline")
+        self.assertEqual(source_type_for("https://www.acog.org/clinical/guidance/practice-bulletin/2018/06/polycystic-ovary-syndrome/"), "guideline")
+        self.assertEqual(source_type_for("https://www.who.int/publications/i/item/9789240"), "guideline")
+        self.assertEqual(source_type_for("https://www.who.int/news-room/fact-sheets/detail/pcos"), "official_guidance")
+        self.assertEqual(source_type_for("https://www.acog.org/womens-health/faqs/heavy-menstrual-bleeding"), "professional_society")
+
+    def test_guideline_search_targets_guideline_bodies_and_drops_non_english(self):
+        from health_tools.research import sources
+        queries = []
+
+        class FakeDDGS:
+            def __init__(self, timeout=None):
+                pass
+
+            def text(self, query, max_results):
+                queries.append(query)
+                return [{"href": "https://www.who.int/fr/news-room/x", "title": "fr"},
+                        {"href": "https://applications.emro.who.int/imemrf/x", "title": "index"},
+                        {"href": "https://www.nice.org.uk/guidance/ng88", "title": "NG88"},
+                        {"href": "https://example.com/x", "title": "not allowed"}]
+
+        fake_module = type(sys)("ddgs")
+        fake_module.DDGS = FakeDDGS
+        with unittest.mock.patch.dict(sys.modules, {"ddgs": fake_module}), unittest.mock.patch.object(sources.time, "sleep"):
+            docs = sources.guideline_documents("heavy menstrual bleeding")
+        self.assertIn("site:nice.org.uk", queries[0])
+        self.assertIn("guideline", queries[0])
+        self.assertEqual([d.url for d in docs], ["https://www.nice.org.uk/guidance/ng88"])
+        self.assertEqual(docs[0].source_type, "guideline")
+
+    def test_pdf_text_is_extracted(self):
+        from health_tools.research.web_reader import extract_pdf_text
+        title, text, pages = extract_pdf_text(tiny_pdf("Tranexamic acid reduces menstrual blood loss."))
+        self.assertEqual(pages, 1)
+        self.assertIn("Tranexamic acid reduces menstrual blood loss.", text)
+
+    def test_bad_pdf_is_a_reader_error(self):
+        from health_tools.research.web_reader import extract_pdf_text
+        with self.assertRaises(ReaderError):
+            extract_pdf_text(b"%PDF-1.4 not really a pdf")
+
+    def test_quotes_survive_pdf_hyphen_artifacts(self):
+        doc = "Read the notice (https://www.nice.org.uk/terms-andconditions). Tranexamic acid reduces blood loss."
+        self.assertTrue(quote_in_document("Read the notice (https://www.nice.org.uk/terms-and-conditions).", doc))
+        self.assertFalse(quote_in_document("Tranexamic acid increases blood loss and more words here.", doc))
+
+
+class ProgressTests(unittest.TestCase):
+    def test_progress_messages_cover_each_stage(self):
+        searches = Searches()
+        agent, _, _ = make_agent(searches)
+        messages = []
+        agent.run("What helps period pain, and does diet help?", progress=messages.append)
+        text = " | ".join(messages)
+        for stage in ("Planned", "searching", "Reading", "Extracted", "verified word for word", "Writing the report"):
+            self.assertIn(stage, text)
+
+    def test_broken_progress_callback_does_not_break_research(self):
+        agent, _, _ = make_agent(Searches())
+
+        def broken(_):
+            raise RuntimeError("display crashed")
+
+        self.assertEqual(agent.run("What helps period pain, and does diet help?", progress=broken).status, "complete")
+
+
+class QuotaWaitTests(unittest.TestCase):
+    def setUp(self):
+        llm_module._cooldown_until.clear()
+
+    def tearDown(self):
+        llm_module._cooldown_until.clear()
+
+    def test_waits_for_cooldown_when_every_model_is_limited(self):
+        import time as real_time
+        chat = FakeChat(result=RefinedSearch(search_terms=["a"]))
+        client = llm_module.LangChainStructuredLLM([(chat, "only", 100)])
+        llm_module._cooldown_until["only"] = real_time.monotonic() + 30
+        slept = []
+
+        def fake_sleep(seconds):
+            slept.append(seconds)
+            llm_module._cooldown_until["only"] = 0  # cooldown has passed
+
+        with unittest.mock.patch("time.sleep", fake_sleep):
+            self.assertEqual(client.ask(RefinedSearch, "s", "u").search_terms, ["a"])
+        self.assertTrue(slept and 25 < slept[0] <= 30)
+
+    def test_planner_failure_is_logged(self):
+        fast = FakeLLM("fast", {"ResearchPlan": lambda _: (_ for _ in ()).throw(RuntimeError("429 quota"))})
+        result = ResearchAgent(fast, FakeLLM("long", {}), searches={}).run("What helps period pain?")
+        self.assertEqual(result.status, "error")
+        self.assertTrue(any("planner failed: RuntimeError: 429 quota" in l for l in result.search_log))

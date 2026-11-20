@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "kind": "demo",
+  "version": "demo-v1",
+  "passages": [
+    {
+      "passage_id": "demo:period-diary:1",
+      "title": "SYNTHETIC period diary fixture",
+      "url": "https://example.org/synthetic-period-diary",
+      "publisher": "Software test fixture",
+      "source_version": "demo-v1",
+      "locator": "Fixture paragraph 1",
+      "text": "Synthetic period diary example: record confirmed period start dates. This fixture supplies no clinical advice.",
+      "jurisdiction": "TEST",
+      "population": "adults",
+      "language": "en",
+      "status": "approved",
+      "rights_status": "permitted",
+      "rights_basis": "Original synthetic software fixture",
+      "reviewer": "Automated fixture setup; not a clinician",
+      "reviewed_on": "2026-01-01",
+      "review_due": "2027-01-01",
+      "sha256": "9594e4c9b713fc7f9179ca46916849b91731f27a409be7194fb58b3910069813"
+    }
+  ]
+}
