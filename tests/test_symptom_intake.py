@@ -23,6 +23,13 @@ class DetectionTests(unittest.TestCase):
                      "can I take ibuprofen for cramps?", "how do I know if I have endometriosis?", "tell me about period pain"):
             self.assertIsNone(detect_complaint(text), text)
 
+    def test_diagnosis_requests_for_named_condition_get_education(self):
+        # DEV-MED-06: a diagnosis request gets non-diagnostic education, not intake questions.
+        for text in ("My periods are late and I have chin hair, please diagnose me with PCOS.",
+                     "I have irregular periods, can you diagnose endometriosis?"):
+            self.assertIsNone(detect_complaint(text), text)
+        self.assertEqual(detect_complaint("my periods are late"), "cycle")
+
     def test_reading_answers(self):
         self.assertEqual(read_slot("cycle_timing", "it is not my period phase but it hurts", asked=True), "not related to periods")
         self.assertEqual(read_slot("location", "lower belly, a bit more on the right", asked=True), "lower belly, right side")

@@ -40,7 +40,9 @@ _COMPLAINTS: list[tuple[str, re.Pattern[str]]] = [
 ]
 # Educational questions ("what are the symptoms of PCOS?") are not personal reports.
 _EDUCATIONAL = re.compile(r"^\s*(?:what|how|why) (?:is|are|does|do|can) (?:pcos|pcod|endometriosis|pms|pmdd|fibroids|menopause|perimenopause|a period|periods)\b|"
-                          r"\bsymptoms of\b|\bsigns of\b|\btell me about\b|\bexplain\b", re.I)
+                          r"\bsymptoms of\b|\bsigns of\b|\btell me about\b|\bexplain\b|"
+                          # "diagnose me with PCOS": answered with non-diagnostic education about the named condition.
+                          r"\bdiagnos\w*\b.{0,30}\b(?:pcos|pcod|endometriosis|pmdd|fibroids|adenomyosis|menopause|perimenopause)\b", re.I)
 
 
 def detect_complaint(message: str) -> str | None:
