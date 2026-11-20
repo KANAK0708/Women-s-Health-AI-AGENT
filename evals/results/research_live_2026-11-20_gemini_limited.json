@@ -1,0 +1,283 @@
+{
+  "suite": "Research agent evaluation (development)",
+  "started_at": "2026-11-20T20:30:18.401999",
+  "models": {
+    "plan_and_report": "groq:openai/gpt-oss-120b -> gemini:gemini-3.5-flash",
+    "extraction": "gemini:gemini-3.5-flash -> groq:openai/gpt-oss-120b"
+  },
+  "results": [
+    {
+      "id": "heavy-menstrual-bleeding",
+      "category": "research",
+      "status": "partial",
+      "status_ok": true,
+      "duration_s": 285.0,
+      "pipeline_failures": 2,
+      "coverage": 1.0,
+      "covered": [
+        "hormonal IUD",
+        "tranexamic acid",
+        "NSAIDs",
+        "procedures"
+      ],
+      "missing": [],
+      "findings": 11,
+      "strong_evidence_share": 0.45,
+      "rejected_share": 0.15,
+      "sources": 3,
+      "violations": [],
+      "passed": true
+    }
+  ],
+  "reports": {
+    "heavy-menstrual-bleeding": {
+      "question": "What are the treatment options for heavy menstrual bleeding?",
+      "status": "partial",
+      "summary": "Non\u2011steroidal anti\u2011inflammatory drugs (NSAIDs), anti\u2011fibrinolytics, and paracetamol are medication classes used to treat heavy menstrual bleeding associated with IUD use [F1]. Specific endometrial ablation techniques evaluated include transcervical endometrial resection (TCRE) with or without rollerball, other resectoscopic endometrial ablation, microwave non\u2011resectoscopic endometrial ablation (NREA), hydrothermal ablation NREA, bipolar NREA, balloon NREA, and other NREA [F2]. Vitamin B1 was used as a treatment for heavy menstrual bleeding in copper IUD users [F3]. Medication classes used to treat heavy menstrual bleeding include non\u2011steroidal anti\u2011inflammatory drugs (NSAIDs), antifibrinolytics (tranexamic acid), combined oral contraceptives, combined vaginal ring, long\u2011cycle and luteal oral progestogens, levonorgestrel\u2011releasing intrauterine system, ethamsylate, and danazol [F4].",
+      "sub_answers": [
+        {
+          "question": "What medication classes are used to treat heavy menstrual bleeding?",
+          "answer": "Non\u2011steroidal anti\u2011inflammatory drugs (NSAIDs), anti\u2011fibrinolytics, and paracetamol are medication classes used to treat heavy menstrual bleeding associated with IUD use [F1]. Vitamin B1 was used as a treatment for heavy menstrual bleeding in copper IUD users [F3]. Medication classes used to treat heavy menstrual bleeding include non\u2011steroidal anti\u2011inflammatory drugs (NSAIDs), antifibrinolytics (tranexamic acid), combined oral contraceptives, combined vaginal ring, long\u2011cycle and luteal oral progestogens, levonorgestrel\u2011releasing intrauterine system, ethamsylate, and danazol [F4]. Heavy bleeding caused by problems with ovulation, endometriosis, PCOS, and fibroids often can be managed with certain hormonal birth control methods [F6]. Hormone therapy can be helpful for heavy menstrual bleeding that occurs during perimenopause [F7]. Gonadotropin-releasing hormone (GnRH) agonists stop the menstrual cycle and reduce the size of fibroids [F8].",
+          "finding_ids": [
+            "F1",
+            "F3",
+            "F4",
+            "F6",
+            "F7",
+            "F8"
+          ]
+        },
+        {
+          "question": "What surgical and procedural interventions are available for heavy menstrual bleeding?",
+          "answer": "Specific endometrial ablation techniques evaluated include transcervical endometrial resection (TCRE) with or without rollerball, other resectoscopic endometrial ablation, microwave non\u2011resectoscopic endometrial ablation (NREA), hydrothermal ablation NREA, bipolar NREA, balloon NREA, and other NREA [F2]. Surgical and procedural interventions for heavy menstrual bleeding include open (abdominal), minimally invasive (vaginal or laparoscopic), and unspecified hysterectomy, resectoscopic endometrial ablation (REA), non\u2011resectoscopic endometrial ablation (NREA), unspecified endometrial ablation, and the levonorgestrel\u2011releasing intrauterine system [F5]. Hysterectomy is surgical removal of the uterus. Hysterectomy is used to treat fibroids and adenomyosis when other types of treatment have failed or are not an option [F9]. Uterine artery embolization (UAE) is used to treat fibroids by blocking the blood vessels to the uterus [F10]. Endometrial ablation destroys the lining of the uterus to stop or reduce menstrual bleeding [F11].",
+          "finding_ids": [
+            "F2",
+            "F5",
+            "F9",
+            "F10",
+            "F11"
+          ]
+        }
+      ],
+      "key_findings": [
+        {
+          "id": "F1",
+          "sub_question": "What medication classes are used to treat heavy menstrual bleeding?",
+          "claim": "Non\u2011steroidal anti\u2011inflammatory drugs (NSAIDs), anti\u2011fibrinolytics, and paracetamol are medication classes used to treat heavy menstrual bleeding associated with IUD use.",
+          "quote": "Medical therapies used to reduce heavy menstrual bleeding or pain associated with Cu and LNG IUD use include non-steroidal anti-inflammatory drugs (NSAIDs), anti-fibrinolytics and paracetamol.",
+          "source_id": "pubmed:36017945",
+          "source_url": "https://pubmed.ncbi.nlm.nih.gov/36017945/",
+          "source_type": "systematic_review",
+          "published": "2022 Aug 26",
+          "support_score": 0.88
+        },
+        {
+          "id": "F2",
+          "sub_question": "What surgical and procedural interventions are available for heavy menstrual bleeding?",
+          "claim": "Specific endometrial ablation techniques evaluated include transcervical endometrial resection (TCRE) with or without rollerball, other resectoscopic endometrial ablation, microwave non\u2011resectoscopic endometrial ablation (NREA), hydrothermal ablation NREA, bipolar NREA, balloon NREA, and other NREA.",
+          "quote": "We also analysed different endometrial ablation and resection techniques separately from the main network: transcervical endometrial resection (TCRE) with or without rollerball, other resectoscopic endometrial ablation (REA), microwave non-resectoscopic endometrial ablation (NREA), hydrothermal ablation NREA, bipolar NREA, balloon NREA and other NREA.",
+          "source_id": "pubmed:35638592",
+          "source_url": "https://pubmed.ncbi.nlm.nih.gov/35638592/",
+          "source_type": "systematic_review",
+          "published": "2022 May 31",
+          "support_score": 0.83
+        },
+        {
+          "id": "F3",
+          "sub_question": "What medication classes are used to treat heavy menstrual bleeding?",
+          "claim": "Vitamin B1 was used as a treatment for heavy menstrual bleeding in copper IUD users.",
+          "quote": "Treatment of heavy menstrual bleeding Cu IUD Vitamin B1 resulted in fewer pads used per day (mean difference (MD) -7.00, 95% confidence interval (CI) -8.50 to -5.50) and fewer bleeding days (MD -2.00, 95% CI -2.38 to -1.62; 1 trial; 110 women; low-certainty evidence) compared to placebo.",
+          "source_id": "pubmed:36017945",
+          "source_url": "https://pubmed.ncbi.nlm.nih.gov/36017945/",
+          "source_type": "systematic_review",
+          "published": "2022 Aug 26",
+          "support_score": 0.78
+        },
+        {
+          "id": "F4",
+          "sub_question": "What medication classes are used to treat heavy menstrual bleeding?",
+          "claim": "Medication classes used to treat heavy menstrual bleeding include non\u2011steroidal anti\u2011inflammatory drugs (NSAIDs), antifibrinolytics (tranexamic acid), combined oral contraceptives, combined vaginal ring, long\u2011cycle and luteal oral progestogens, levonorgestrel\u2011releasing intrauterine system, ethamsylate, and danazol.",
+          "quote": "The included medical interventions were: non-steroidal anti-inflammatory drugs (NSAIDs), antifibrinolytics (tranexamic acid), combined oral contraceptives (COC), combined vaginal ring (CVR), long-cycle and luteal oral progestogens, LNG-IUS, ethamsylate and danazol (included to provide indirect evidence), which were compared to placebo.",
+          "source_id": "pubmed:35638592",
+          "source_url": "https://pubmed.ncbi.nlm.nih.gov/35638592/",
+          "source_type": "systematic_review",
+          "published": "2022 May 31",
+          "support_score": 0.68
+        },
+        {
+          "id": "F5",
+          "sub_question": "What surgical and procedural interventions are available for heavy menstrual bleeding?",
+          "claim": "Surgical and procedural interventions for heavy menstrual bleeding include open (abdominal), minimally invasive (vaginal or laparoscopic), and unspecified hysterectomy, resectoscopic endometrial ablation (REA), non\u2011resectoscopic endometrial ablation (NREA), unspecified endometrial ablation, and the levonorgestrel\u2011releasing intrauterine system.",
+          "quote": "Surgical interventions were: open (abdominal), minimally invasive (vaginal or laparoscopic) and unspecified (or surgeon's choice of route of) hysterectomy, REA, NREA, unspecified endometrial ablation (EA) and LNG-IUS.",
+          "source_id": "pubmed:35638592",
+          "source_url": "https://pubmed.ncbi.nlm.nih.gov/35638592/",
+          "source_type": "systematic_review",
+          "published": "2022 May 31",
+          "support_score": 0.58
+        },
+        {
+          "id": "F6",
+          "sub_question": "What medication classes are used to treat heavy menstrual bleeding?",
+          "claim": "Heavy bleeding caused by problems with ovulation, endometriosis, PCOS, and fibroids often can be managed with certain hormonal birth control methods.",
+          "quote": "Heavy bleeding caused by problems with ovulation, endometriosis, PCOS, and fibroids often can be managed with certain hormonal birth control methods.",
+          "source_id": "web:2",
+          "source_url": "https://www.acog.org/womens-health/faqs/heavy-menstrual-bleeding",
+          "source_type": "professional_society",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F7",
+          "sub_question": "What medication classes are used to treat heavy menstrual bleeding?",
+          "claim": "Hormone therapy can be helpful for heavy menstrual bleeding that occurs during perimenopause.",
+          "quote": "Hormone therapy can be helpful for heavy menstrual bleeding that occurs during perimenopause.",
+          "source_id": "web:2",
+          "source_url": "https://www.acog.org/womens-health/faqs/heavy-menstrual-bleeding",
+          "source_type": "professional_society",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F8",
+          "sub_question": "What medication classes are used to treat heavy menstrual bleeding?",
+          "claim": "Gonadotropin-releasing hormone (GnRH) agonists stop the menstrual cycle and reduce the size of fibroids.",
+          "quote": "Gonadotropin-releasing hormone (GnRH) agonists stop the menstrual cycle and reduce the size of fibroids.",
+          "source_id": "web:2",
+          "source_url": "https://www.acog.org/womens-health/faqs/heavy-menstrual-bleeding",
+          "source_type": "professional_society",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F9",
+          "sub_question": "What surgical and procedural interventions are available for heavy menstrual bleeding?",
+          "claim": "Hysterectomy is surgical removal of the uterus. Hysterectomy is used to treat fibroids and adenomyosis when other types of treatment have failed or are not an option.",
+          "quote": "Hysterectomy is surgical removal of the uterus. Hysterectomy is used to treat fibroids and adenomyosis when other types of treatment have failed or are not an option.",
+          "source_id": "web:2",
+          "source_url": "https://www.acog.org/womens-health/faqs/heavy-menstrual-bleeding",
+          "source_type": "professional_society",
+          "published": null,
+          "support_score": 1.0
+        },
+        {
+          "id": "F10",
+          "sub_question": "What surgical and procedural interventions are available for heavy menstrual bleeding?",
+          "claim": "Uterine artery embolization (UAE) is used to treat fibroids by blocking the blood vessels to the uterus.",
+          "quote": "Uterine artery embolization (UAE) is used to treat fibroids. In UAE, the blood vessels to the uterus are blocked, which stops the blood flow that allows fibroids to grow.",
+          "source_id": "web:2",
+          "source_url": "https://www.acog.org/womens-health/faqs/heavy-menstrual-bleeding",
+          "source_type": "professional_society",
+          "published": null,
+          "support_score": 0.91
+        },
+        {
+          "id": "F11",
+          "sub_question": "What surgical and procedural interventions are available for heavy menstrual bleeding?",
+          "claim": "Endometrial ablation destroys the lining of the uterus to stop or reduce menstrual bleeding.",
+          "quote": "Endometrial ablation destroys the lining of the uterus. It stops or reduces menstrual bleeding.",
+          "source_id": "web:2",
+          "source_url": "https://www.acog.org/womens-health/faqs/heavy-menstrual-bleeding",
+          "source_type": "professional_society",
+          "published": null,
+          "support_score": 0.89
+        }
+      ],
+      "conflicts": [],
+      "gaps": [
+        "What non\u2011pharmacologic management strategies are recommended for heavy menstrual bleeding?"
+      ],
+      "sources": [
+        {
+          "source_id": "pubmed:36017945",
+          "title": "Interventions to prevent or treat heavy menstrual bleeding or pain associated with intrauterine-device use.",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/36017945/",
+          "publisher": "NCBI / PubMed",
+          "source_type": "systematic_review",
+          "published": "2022 Aug 26",
+          "retrieved_at": "2026-11-20T15:00:35.114220+00:00",
+          "sha256": "d7a40db3a1baf5e0548f55195115bb8e8e8c2a523ed01ddfe4b22cfeaf43336a"
+        },
+        {
+          "source_id": "pubmed:35638592",
+          "title": "Interventions for heavy menstrual bleeding; overview of Cochrane reviews and network meta-analysis.",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/35638592/",
+          "publisher": "NCBI / PubMed",
+          "source_type": "systematic_review",
+          "published": "2022 May 31",
+          "retrieved_at": "2026-11-20T15:00:26.554307+00:00",
+          "sha256": "5f29dff4ecbd306ba77e87ad5ad1b0baa72cd7e3ad7cbb2746edf88579bb9cdb"
+        },
+        {
+          "source_id": "web:2",
+          "title": "Heavy Menstrual Bleeding | ACOG",
+          "url": "https://www.acog.org/womens-health/faqs/heavy-menstrual-bleeding",
+          "publisher": "www.acog.org",
+          "source_type": "professional_society",
+          "published": null,
+          "retrieved_at": "2026-11-20T20:33:55.892484+05:30",
+          "sha256": "535b5460a89f6b159e6e15fe1dd182bb19e6ae76cbfb224d4dd2bd77a16b0962"
+        }
+      ],
+      "search_log": [
+        "round 1 | pubmed | 'heavy menstrual bleeding medication' -> 3 new",
+        "round 1 | europepmc | 'heavy menstrual bleeding medication' -> 3 new",
+        "round 1 | medlineplus | 'heavy menstrual bleeding medication' -> 1 new",
+        "round 1 | web | 'heavy menstrual bleeding medication' -> 4 new",
+        "round 1 | guidelines | 'heavy menstrual bleeding medication' -> 3 new",
+        "round 1 | pubmed | 'heavy menstrual bleeding surgery' -> 1 new",
+        "round 1 | europepmc | 'heavy menstrual bleeding surgery' -> 3 new",
+        "round 1 | medlineplus | 'heavy menstrual bleeding surgery' -> 2 new",
+        "round 1 | web | 'heavy menstrual bleeding surgery' -> 4 new",
+        "round 1 | guidelines | 'heavy menstrual bleeding surgery' -> 2 new",
+        "round 1 | pubmed | 'heavy menstrual bleeding non drug' -> 1 new",
+        "round 1 | europepmc | 'heavy menstrual bleeding non drug' -> 3 new",
+        "round 1 | medlineplus | 'heavy menstrual bleeding non drug' -> 0 new",
+        "round 1 | web | 'heavy menstrual bleeding non drug' -> 0 new",
+        "round 1 | guidelines | 'heavy menstrual bleeding non drug' -> 1 new",
+        "skipped https://cks.nice.org.uk/topics/menorrhagia-heavy-menstrual-bleeding/: HTTP 403",
+        "extracted 0 facts from https://www.nice.org.uk/guidance/ng88 (3420 chars, guideline)",
+        "extracted 0 facts from https://www.nice.org.uk/guidance/ng88/evidence/b-management-pdf-4782293102 (60000 chars, guideline)",
+        "extracted 3 facts from https://pubmed.ncbi.nlm.nih.gov/35638592/ (6870 chars, systematic_review)",
+        "extraction failed for https://europepmc.org/article/MED/42993788: RuntimeError: gemini:gemini-3.5-flash: GoogleRateLimitError: Error calling model 'gemini-3.5-flash' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'mes",
+        "extracted 3 facts from https://pubmed.ncbi.nlm.nih.gov/36017945/ (6030 chars, systematic_review)",
+        "claim meaning check on 5 claims: all faithful",
+        "round 2 | pubmed | 'heavy menstrual bleeding non drug' -> 0 new",
+        "round 2 | europepmc | 'heavy menstrual bleeding non drug' -> 0 new",
+        "round 2 | medlineplus | 'heavy menstrual bleeding non drug' -> 0 new",
+        "round 2 | web | 'heavy menstrual bleeding non drug' -> 0 new",
+        "round 2 | guidelines | 'heavy menstrual bleeding non drug' -> 1 new",
+        "skipped https://cks.nice.org.uk/topics/menorrhagia-heavy-menstrual-bleeding/: HTTP 403",
+        "extracted 6 facts from https://www.acog.org/womens-health/faqs/heavy-menstrual-bleeding (12746 chars, professional_society)",
+        "extracted 1 facts from https://europepmc.org/article/MED/42936234 (17695 chars, narrative_review)",
+        "claim meaning check on 6 claims: reworded 2",
+        "report writer failed: RuntimeError: groq:openai/gpt-oss-120b: BadRequestError: Error code: 400 - {'error': {'message': 'Failed to parse tool call arguments as JSON', 'type': 'invalid_request_error"
+      ],
+      "rejected_findings": 2,
+      "rejection_reasons": {
+        "quote not found in source": 1,
+        "claim is not supported by the quote": 1
+      },
+      "protocol_id": null,
+      "redactions": [],
+      "models": {
+        "plan_and_report": "groq:openai/gpt-oss-120b -> gemini:gemini-3.5-flash",
+        "extraction": "gemini:gemini-3.5-flash -> groq:openai/gpt-oss-120b"
+      },
+      "generated_at": "2026-11-20T20:35:03.376574+05:30",
+      "disclaimer": "Educational research summary built from the cited sources only. It is not a diagnosis or treatment plan; discuss your situation with a qualified clinician."
+    }
+  },
+  "summary": {
+    "cases": 1,
+    "passed": 1,
+    "pass_rate": 1.0,
+    "safety_passed": "0/0",
+    "research_passed": "1/1",
+    "mean_coverage": 1.0,
+    "mean_findings": 11,
+    "mean_strong_evidence_share": 0.45,
+    "mean_rejected_share": 0.15,
+    "mean_duration_s": 285.0,
+    "runs_with_pipeline_failures": 1
+  }
+}

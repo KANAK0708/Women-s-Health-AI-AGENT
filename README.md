@@ -14,7 +14,7 @@ This is a **development education assistant** for adult women's-health questions
 >
 > See [Set up your own API keys](#1-set-up-your-own-api-keys) below.
 
-**Latest test results (20 November 2026):** 289 unit tests passed, 50/50 development scenarios, 7/7 research safety cases, 3/3 live research questions. See the [testing report](docs/TESTING_REPORT.md) for before/after numbers.
+**Latest test results (20 November 2026):** 299 unit tests passed, 50/50 development scenarios, 7/7 research safety cases, 3/3 live research questions. See the [testing report](docs/TESTING_REPORT.md) for before/after numbers.
 
 The checked-in evidence registry contains unverified summaries. Strict mode excludes
 these records by default; it will abstain until approved evidence is available.
@@ -54,13 +54,17 @@ The implemented development workflows cover these areas:
 
 ## 🛡️ What Does It NOT Do? (Safety Guardrails)
 
-The software applies prototype safety/scope checks before retrieval. These rules are not clinically validated or a statement of regulatory compliance:
+The software applies prototype safety/scope checks before retrieval. These rules are not clinically validated or a statement of regulatory compliance.
 
-* ❌ **No Individual Medical Diagnoses:** The agent educates; it does not replace a doctor.
-* ❌ **No Medication Prescriptions or Dosing Adjustments:** Requests to start, stop, or change doses of prescription drugs (Metformin, Spironolactone, Birth Control, etc.) are strictly blocked and referred to a prescribing clinician or pharmacist.
-* ❌ **No Emergency Contraception Prescribing:** Queries regarding emergency contraceptive pills (e.g., *i-pill*, *Plan B*, *levonorgestrel*) are safely declared outside the educational corpus.
-* ❌ **Immediate Emergency Escalation:** Red-flag symptoms (such as soaking through $\ge$ 2 pads an hour, sudden fainting, severe acute pelvic pain, or pregnancy complications) immediately trigger emergency triage guidance, bypassing all tools and retrieval.
-* ❌ **Adults Only (18+):** Adolescent physiology differs significantly; questions from users under 18 are automatically routed to pediatric care.
+The same rules run in **every entry point**: the main chat, the guided symptom questions (a safety message always ends them), and the research agent, before anything is sent to Groq, Gemini or a search service.
+
+* ❌ **No Individual Medical Diagnoses:** The agent educates; it does not replace a doctor. Requests such as *"diagnose me with PCOS"* or *"do I have endometriosis?"* get general information that starts with *"I can't diagnose you"*, instead of a verdict or more symptom questions.
+* ❌ **No Medication Prescriptions or Dosing Adjustments:** Requests to start, stop, skip, double or change doses of medicines (metformin, spironolactone, letrozole, birth control, iron, ibuprofen, etc.), or to start one *"without a doctor"*, are blocked and referred to a prescribing clinician or pharmacist. General questions such as *"what is metformin used for in PCOS?"* are still answered.
+* ❌ **No Emergency Contraception Prescribing:** Questions about emergency contraceptive pills (*i-pill*, *Plan B*, *ella*, *levonorgestrel*, the *morning-after pill*), or *"unprotected sex / the condom broke, what should I take?"*, are declared outside the educational corpus.
+* ❌ **Immediate Emergency Escalation:** Red-flag symptoms (such as soaking through $\ge$ 2 pads an hour, sudden fainting, severe acute pelvic pain, pregnancy complications, or thoughts of self-harm) immediately trigger emergency guidance, bypassing all tools, retrieval and research.
+* ❌ **Adults Only (18+):** Adolescent physiology differs significantly. Questions about anyone under 18 (*"I'm 15"*, *"im 13"*, *"my 14 year old daughter"*, *"my daughter is 16"*) are routed to a paediatrician, GP or school nurse.
+
+These rules are tested with paraphrased wording in [`tests/test_guardrails_all_entry_points.py`](tests/test_guardrails_all_entry_points.py). They are rule-based, so unusual phrasing can still slip through. Clinician review is pending (see `docs/clinical_review/`).
 
 ---
 
@@ -184,6 +188,14 @@ GEMINI_MODEL=gemini-3.5-flash
 
 `.env` stays on your machine. PostgreSQL and Redis are optional: without them the app uses built-in local storage.
 
+Check that your keys work before a long research run:
+
+```bash
+python3 -m health_tools.research --check          # sends one tiny test request to each provider
+```
+
+Free-tier Gemini keys often hit per-minute or daily limits. The agent then switches to Groq automatically. To use one provider only, without editing `.env`, run with `RESEARCH_PROVIDERS=groq` (or `gemini`).
+
 ### 2. Run the browser chat or the research agent
 
 ```bash
@@ -242,12 +254,13 @@ Full details, including what failed and what is still not tested, are in the [te
 
 | Check | Before (`14aca05`, 10 Nov) | Now (20 Nov) |
 | --- | --- | --- |
-| Unit and integration tests | 167 passed | **289 passed** |
+| Unit and integration tests | 167 passed | **299 passed** |
 | 50 development scenarios | 50/50 | **50/50** (one regression found and fixed in this run) |
 | Research safety cases | did not exist | **7/7** |
 | Live research questions | did not exist | **3/3 passed**, 0.83 topic coverage, all findings from strong evidence |
 | Web research with citations | not available (PubMed links only) | available, with every claim checked against its source quote |
 | Follow-up questions for symptoms | not available | guided questions, one at a time |
+| Safety rules with paraphrased wording (27 phrasings x 3 entry points) | 11 of 27 phrasings handled in chat; research agent had no minor check | **27/27 in every entry point** |
 
 ### Evidence and backend modes
 

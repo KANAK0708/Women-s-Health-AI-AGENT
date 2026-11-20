@@ -10,6 +10,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
+from app.retrieval.filters import MINOR_SCOPE_MESSAGE, mentions_minor
+
 from .clinical_trials import search_clinical_trials
 from .contracts import ToolResult
 from .cycle_history import analyze_cycle_history
@@ -188,8 +190,8 @@ class Orchestrator:
             return finish(decision.message, event="SAFETY_STOP", kind=kind, disposition=disposition)
         if context_error:
             return finish("Session context could not be validated. Please retry without stored context.", event="CONTEXT_INVALID")
-        if context.is_adult == "no" or (context.age is not None and context.age < 18):
-            return finish("This workflow supports adult education only. Please consult an appropriate healthcare professional.", event="MINOR_SCOPE", kind="out_of_scope")
+        if context.is_adult == "no" or (context.age is not None and context.age < 18) or mentions_minor(query):
+            return finish(MINOR_SCOPE_MESSAGE, event="MINOR_SCOPE", kind="out_of_scope")
 
         acknowledgement = conversational_reply(query)
         if acknowledgement:
