@@ -742,3 +742,44 @@ class QuotaWaitTests(unittest.TestCase):
         result = ResearchAgent(fast, FakeLLM("long", {}), searches={}).run("What helps period pain?")
         self.assertEqual(result.status, "error")
         self.assertTrue(any("planner failed: RuntimeError: 429 quota" in l for l in result.search_log))
+
+
+class ProviderOutageTests(unittest.TestCase):
+    """Gemini outages (503/504, daily quota) must not stall research; Groq-only runs must be possible."""
+
+    def setUp(self):
+        llm_module._cooldown_until.clear()
+
+    def _client(self, gemini_error):
+        gemini = FakeChat(error=gemini_error)
+        groq = FakeChat(result=ExtractedFacts())
+        return gemini, groq, llm_module.LangChainStructuredLLM([(gemini, "gemini", 40_000), (groq, "groq", 12_000)])
+
+    def test_server_errors_cool_the_model_down(self):
+        for error in (RuntimeError("504 DEADLINE_EXCEEDED"), RuntimeError("503 UNAVAILABLE: model overloaded"),
+                      TimeoutError("Request timed out")):
+            llm_module._cooldown_until.clear()
+            gemini, groq, client = self._client(error)
+            client.ask(ExtractedFacts, "sys", "one")
+            client.ask(ExtractedFacts, "sys", "two")
+            self.assertEqual(len(gemini.seen), 1, error)  # second call goes straight to Groq
+            self.assertEqual(len(groq.seen), 2, error)
+
+    def test_daily_quota_cools_down_much_longer_than_a_minute(self):
+        self.assertEqual(llm_module._cooldown_seconds(RuntimeError("429 RESOURCE_EXHAUSTED per minute")),
+                         llm_module.QUOTA_COOLDOWN_SECONDS)
+        daily = RuntimeError("429 RESOURCE_EXHAUSTED quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier")
+        self.assertGreaterEqual(llm_module._cooldown_seconds(daily), 3600)
+        self.assertIsNone(llm_module._cooldown_seconds(ValueError("bad schema")))
+
+    def test_research_providers_setting_limits_models(self):
+        env = {"GROQ_API_KEY": "g", "GEMINI_API_KEY": "m", "RESEARCH_PROVIDERS": "groq"}
+        with unittest.mock.patch.dict(os.environ, env), \
+                unittest.mock.patch("dotenv.load_dotenv", lambda *a, **k: None):
+            fast, long = llm_module.build_llms()
+        self.assertNotIn("gemini", fast.name)
+        self.assertNotIn("gemini", long.name)
+        with unittest.mock.patch.dict(os.environ, {**env, "RESEARCH_PROVIDERS": "nonsense"}), \
+                unittest.mock.patch("dotenv.load_dotenv", lambda *a, **k: None):
+            with self.assertRaises(llm_module.ResearchLLMUnavailable):
+                llm_module.build_llms()

@@ -4,6 +4,8 @@
 - "long" (reading full documents and extracting facts): Gemini first, Groq fallback.
 
 Models are configurable with GROQ_MODEL / GEMINI_MODEL in .env.
+RESEARCH_PROVIDERS=groq (or gemini) runs with one provider only, for example when the
+other is down or for a single-provider baseline, without editing .env.
 """
 
 import os
@@ -28,14 +30,34 @@ class StructuredLLM(Protocol):
     def ask(self, schema: type[T], system: str, user: str) -> T: ...
 
 
-QUOTA_COOLDOWN_SECONDS = 60   # free-tier limits are mostly per minute
+QUOTA_COOLDOWN_SECONDS = 60          # free-tier limits are mostly per minute
+DAILY_QUOTA_COOLDOWN_SECONDS = 3600  # a per-day limit won't reset in a minute; stop retrying for an hour
+OUTAGE_COOLDOWN_SECONDS = 120        # 503/504/timeouts: skip the model briefly instead of waiting on it every call
 MAX_QUOTA_WAIT_SECONDS = 90  # wait at most this long when every model is cooling down
 _cooldown_until: dict[str, float] = {}  # model label -> monotonic time it may be retried
+
+PROVIDERS = ("groq", "gemini")
 
 
 def _is_quota_error(exc: Exception) -> bool:
     text = f"{type(exc).__name__} {exc}".casefold()
     return any(marker in text for marker in ("429", "resource_exhausted", "ratelimit", "rate limit", "quota"))
+
+
+def _is_outage(exc: Exception) -> bool:
+    text = f"{type(exc).__name__} {exc}".casefold()
+    return isinstance(exc, TimeoutError) or any(marker in text for marker in (
+        "503", "504", "500 internal", "unavailable", "overloaded", "deadline", "timed out", "timeout"))
+
+
+def _cooldown_seconds(exc: Exception) -> float | None:
+    """How long to skip a model after this error; None for errors unrelated to capacity."""
+    if _is_quota_error(exc):
+        text = str(exc).casefold()
+        return DAILY_QUOTA_COOLDOWN_SECONDS if ("perday" in text or "per day" in text or "daily" in text) else QUOTA_COOLDOWN_SECONDS
+    if _is_outage(exc):
+        return OUTAGE_COOLDOWN_SECONDS
+    return None
 
 
 def _fit(user: str, max_chars: int) -> str:
@@ -87,7 +109,7 @@ class LangChainStructuredLLM:
         errors = []
         for model, label, max_chars in self.models:
             if _cooldown_until.get(label, 0) > time.monotonic():
-                errors.append(f"{label}: skipped after quota error")
+                errors.append(f"{label}: skipped while cooling down after a quota or outage error")
                 continue
             try:
                 result = model.with_structured_output(schema).invoke(
@@ -98,8 +120,8 @@ class LangChainStructuredLLM:
                     raise ValueError("no structured output")
                 return result
             except Exception as exc:
-                if _is_quota_error(exc):
-                    _cooldown_until[label] = time.monotonic() + QUOTA_COOLDOWN_SECONDS
+                if (cooldown := _cooldown_seconds(exc)) is not None:
+                    _cooldown_until[label] = time.monotonic() + cooldown
                 errors.append(f"{label}: {type(exc).__name__}: {str(exc)[:120]}")
         raise RuntimeError(" | ".join(errors))
 
@@ -117,6 +139,9 @@ def build_llms() -> tuple[StructuredLLM, StructuredLLM]:
     gemini_key = (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or "").strip()
     groq_key = "" if groq_key.startswith("your_") else groq_key
     gemini_key = "" if gemini_key.startswith("your_") else gemini_key
+    providers = _selected_providers()
+    groq_key = groq_key if "groq" in providers else ""
+    gemini_key = gemini_key if "gemini" in providers else ""
     groq = gemini = None
     groq_name = os.environ.get("GROQ_MODEL", DEFAULT_GROQ_MODEL)
     gemini_name = os.environ.get("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
@@ -127,10 +152,50 @@ def build_llms() -> tuple[StructuredLLM, StructuredLLM]:
         from langchain_google_genai import ChatGoogleGenerativeAI
         gemini = ChatGoogleGenerativeAI(model=gemini_name, google_api_key=gemini_key, temperature=0, max_retries=1, timeout=60)
     if groq is None and gemini is None:
-        raise ResearchLLMUnavailable("Set GROQ_API_KEY and/or GEMINI_API_KEY in .env to enable research mode.")
+        raise ResearchLLMUnavailable("Set GROQ_API_KEY and/or GEMINI_API_KEY in .env to enable research mode"
+                                     f" (RESEARCH_PROVIDERS allows: {', '.join(providers) or 'none'}).")
 
     groq_entry = (groq, f"groq:{groq_name}", 12_000)        # free-tier token limits
     gemini_entry = (gemini, f"gemini:{gemini_name}", 40_000)  # long context: whole papers
     fast = LangChainStructuredLLM([groq_entry, gemini_entry])
     long = LangChainStructuredLLM([gemini_entry, groq_entry])
     return fast, long
+
+
+def _selected_providers() -> tuple[str, ...]:
+    raw = os.environ.get("RESEARCH_PROVIDERS", "").strip().casefold()
+    if not raw:
+        return PROVIDERS
+    return tuple(p for p in (part.strip() for part in raw.split(",")) if p in PROVIDERS)
+
+
+def check_providers(timeout: float = 30) -> list[tuple[str, bool, float, str]]:
+    """Send one tiny structured request to each configured provider: (label, ok, seconds, note).
+
+    Uses a synthetic prompt (no medical or personal text), no retries, and never reports key values.
+    """
+    import time
+
+    class Ready(BaseModel):
+        ready: bool
+
+    fast, long = build_llms()
+    results, seen = [], set()
+    for model, label, _ in fast.models + long.models:
+        if label in seen:
+            continue
+        seen.add(label)
+        for attr in ("max_retries", "timeout"):
+            if hasattr(model, attr):
+                try:
+                    setattr(model, attr, 0 if attr == "max_retries" else timeout)
+                except (AttributeError, ValueError, TypeError):
+                    pass
+        start = time.monotonic()
+        try:
+            model.with_structured_output(Ready).invoke("Reply with ready=true.")
+            results.append((label, True, time.monotonic() - start, "ok"))
+        except Exception as exc:  # noqa: BLE001 - report every failure kind
+            kind = "quota" if _is_quota_error(exc) else "outage" if _is_outage(exc) else "error"
+            results.append((label, False, time.monotonic() - start, f"{kind}: {type(exc).__name__}"))
+    return results
